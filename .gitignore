@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+backend/node_modules/
+
+# Variables de entorno (nunca subir al repo)
+.env
+.env.production
+.env.local
+
+# React Native
+android/
+ios/
+*.keystore
+*.jks
+
+# Build
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
