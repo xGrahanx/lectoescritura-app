@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
     borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 2,
   },
-  infoActividad: { flex: 1 },
+  infoActividad: { flex: 1, marginLeft: 12 },
   tituloActividad: { fontSize: 14, fontWeight: '500', color: '#212121' },
   fechaActividad: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
   puntajeActividad: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },

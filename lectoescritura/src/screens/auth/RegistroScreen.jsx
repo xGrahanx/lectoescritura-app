@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiRegistro } from '../../services/authService';
@@ -52,7 +53,8 @@ const RegistroScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.contenedor} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={styles.contenedor} keyboardShouldPersistTaps="handled">
       <TouchableOpacity style={styles.botonVolver} onPress={() => navigation.goBack()}>
         <MaterialCommunityIcons name="arrow-left" size={24} color="#424242" />
       </TouchableOpacity>
@@ -112,6 +114,7 @@ const RegistroScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
