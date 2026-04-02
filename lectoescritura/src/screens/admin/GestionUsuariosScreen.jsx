@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   etiquetaPendiente: { backgroundColor: '#FFF8E1', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 },
   textoPendiente: { fontSize: 11, color: '#F57F17', fontWeight: 'bold' },
   contenidoTarjeta: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   info: { flex: 1 },
   nombre: { fontSize: 14, fontWeight: '600', color: '#212121' },
   correo: { fontSize: 12, color: '#9E9E9E', marginTop: 1 },

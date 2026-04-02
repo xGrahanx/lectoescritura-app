@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
     borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 2,
   },
-  iconoTipo: { width: 52, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  iconoTipo: { width: 52, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   infoTipo: { flex: 1 },
   tituloTipo: { fontSize: 15, fontWeight: '600', color: '#212121' },
   descripcionTipo: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },

@@ -11,7 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const ALERTAS_EJEMPLO = [
   { id: 1, tipo: 'error', estudiante: 'Pedro Martinez', titulo: 'Errores ortograficos frecuentes', mensaje: 'Pedro cometio 8 errores ortograficos en el ultimo dictado. La IA detecta dificultad con el uso de "b" y "v".', fecha: '01/04/2026', hora: '10:30', leida: false },
-  { id: 2, tipo: 'logro', estudiante: 'Ana Garcia', titulo: 'Rendimiento sobresaliente', mensaje: 'Ana obtuvo 100% en ejercicios de IA por 3 dias consecutivos. Se recomienda asignarle tareas de nivel avanzado.', fecha: '01/04/2026', hora: '09:15', leida: false },
+  { id: 2, tipo: 'logro', estudiante: 'Ana Garcia', titulo: 'Rendimiento sobresaliente', mensaje: 'Ana obtuvo 100% en ejercicios de IA por 3 dias consecutivos. Se recomienda asignarle tareas de nivel avanzado.', fecha: '01/04/2026', hora: '09:15', leida: true },
   { id: 3, tipo: 'inactividad', estudiante: 'Luisa Rodriguez', titulo: 'Inactividad prolongada', mensaje: 'Luisa no ha completado ningun ejercicio en los ultimos 5 dias. Se recomienda contactar al estudiante.', fecha: '31/03/2026', hora: '18:00', leida: true },
   { id: 4, tipo: 'mejora', estudiante: 'Carlos Lopez', titulo: 'Mejora significativa', mensaje: 'Carlos mejoro su promedio de 65% a 91% en la ultima semana. La IA detecta progreso en comprension lectora.', fecha: '30/03/2026', hora: '14:20', leida: true },
 ];
@@ -44,7 +44,6 @@ const AlertasScreen = () => {
         style={[styles.tarjeta, !item.leida && styles.tarjetaNoLeida]}
         onPress={() => marcarLeida(item.id)}
       >
-        {!item.leida && <View style={styles.puntito} />}
         <View style={[styles.iconoContenedor, { backgroundColor: config.fondo }]}>
           <MaterialCommunityIcons name={config.icono} size={24} color={config.color} />
         </View>
@@ -117,10 +116,10 @@ const styles = StyleSheet.create({
   textoFiltro: { fontSize: 12, color: '#757575' },
   textoFiltroActivo: { color: '#FFFFFF', fontWeight: '600' },
   lista: { padding: 16, paddingBottom: 20, paddingTop: 8 },
-  tarjeta: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, flexDirection: 'row', elevation: 2, position: 'relative', marginBottom: 12 },
+  tarjeta: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, flexDirection: 'row', marginBottom: 12, elevation: 1 },
   tarjetaNoLeida: { borderLeftWidth: 3, borderLeftColor: '#4A90D9' },
   puntito: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#4A90D9' },
-  iconoContenedor: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  iconoContenedor: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   contenido: { flex: 1 },
   encabezadoAlerta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   etiquetaTipo: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },

@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', elevation: 2,
     marginBottom: 12,
   },
-  iconoContenedor: { width: 56, height: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  iconoContenedor: { width: 56, height: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   info: { flex: 1 },
   titulo: { fontSize: 15, fontWeight: '600', color: '#212121', marginBottom: 2 },
   descripcion: { fontSize: 12, color: '#9E9E9E', marginBottom: 6 },

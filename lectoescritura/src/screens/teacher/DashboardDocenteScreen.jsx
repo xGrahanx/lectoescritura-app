@@ -135,8 +135,9 @@ const DashboardDocenteScreen = ({ navigation }) => {
               <Text style={styles.nombreEstudiante}>{est.nombre}</Text>
               <View style={styles.rachaRow}>
                 <MaterialCommunityIcons name="fire" size={14} color="#FF9800" />
-                <Text style={styles.datosEstudiante}> {est.racha} dias  |  {est.promedio}% promedio</Text>
+                <Text style={styles.datosEstudiante}>  {est.racha} dias seguidos</Text>
               </View>
+              <Text style={styles.promedioEstudiante}>{est.promedio}% promedio</Text>
             </View>
             <TouchableOpacity
               style={styles.botonAsignar}
@@ -236,6 +237,7 @@ const styles = StyleSheet.create({
   rachaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   nombreEstudiante: { fontSize: 14, fontWeight: '600', color: '#212121' },
   datosEstudiante: { fontSize: 12, color: '#757575' },
+  promedioEstudiante: { fontSize: 12, color: '#2E7D32', fontWeight: '600', marginTop: 2 },
   promedioAtencion: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
   botonAsignar: {
     backgroundColor: '#2E7D32', paddingHorizontal: 12,

@@ -10,13 +10,13 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput } from 'r
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const ESTUDIANTES_EJEMPLO = [
-  { id: 1, nombre: 'Ana Garcia', grado: '3er Grado', promedio: 95, activo: true, ultimaActividad: 'Hoy' },
-  { id: 2, nombre: 'Carlos Lopez', grado: '3er Grado', promedio: 91, activo: true, ultimaActividad: 'Hoy' },
-  { id: 3, nombre: 'Maria Torres', grado: '3er Grado', promedio: 78, activo: true, ultimaActividad: 'Ayer' },
-  { id: 4, nombre: 'Jose Ramirez', grado: '3er Grado', promedio: 72, activo: false, ultimaActividad: 'Hace 3 dias' },
-  { id: 5, nombre: 'Pedro Martinez', grado: '3er Grado', promedio: 42, activo: true, ultimaActividad: 'Hoy' },
-  { id: 6, nombre: 'Luisa Rodriguez', grado: '3er Grado', promedio: 38, activo: false, ultimaActividad: 'Hace 5 dias' },
-  { id: 7, nombre: 'Sofia Herrera', grado: '3er Grado', promedio: 85, activo: true, ultimaActividad: 'Hoy' },
+  { id: 1, nombre: 'Ana Garcia',      grado: '4to Grado - Seccion A', promedio: 95, activo: true,  ultimaActividad: 'Hoy' },
+  { id: 2, nombre: 'Carlos Lopez',    grado: '3er Grado - Seccion A', promedio: 91, activo: true,  ultimaActividad: 'Hoy' },
+  { id: 3, nombre: 'Maria Torres',    grado: '5to Grado - Seccion B', promedio: 78, activo: true,  ultimaActividad: 'Ayer' },
+  { id: 4, nombre: 'Jose Ramirez',    grado: '3er Grado - Seccion B', promedio: 72, activo: false, ultimaActividad: 'Hace 3 dias' },
+  { id: 5, nombre: 'Pedro Martinez',  grado: '4to Grado - Seccion A', promedio: 42, activo: true,  ultimaActividad: 'Hoy' },
+  { id: 6, nombre: 'Luisa Rodriguez', grado: '2do Grado - Seccion C', promedio: 38, activo: false, ultimaActividad: 'Hace 5 dias' },
+  { id: 7, nombre: 'Sofia Herrera',   grado: '5to Grado - Seccion C', promedio: 85, activo: true,  ultimaActividad: 'Hoy' },
 ];
 
 const colorRendimiento = (promedio) => {
@@ -130,13 +130,13 @@ const styles = StyleSheet.create({
   textoFiltroActivo: { color: '#FFFFFF', fontWeight: '600' },
   lista: { padding: 16, paddingBottom: 20, paddingTop: 8 },
   tarjeta: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', elevation: 2, marginBottom: 12 },
-  avatar: { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   inicial: { fontSize: 18, fontWeight: 'bold' },
   info: { flex: 1 },
   nombre: { fontSize: 14, fontWeight: '600', color: '#212121' },
   grado: { fontSize: 12, color: '#9E9E9E', marginTop: 1 },
   pie: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  indicadorActividad: { width: 8, height: 8, borderRadius: 4 },
+  indicadorActividad: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   textoActividad: { fontSize: 11, color: '#9E9E9E' },
   promedioContenedor: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   promedioValor: { fontSize: 14, fontWeight: 'bold' },
