@@ -12,6 +12,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DashboardAdminScreen from '../screens/admin/DashboardAdminScreen';
 import GestionUsuariosScreen from '../screens/admin/GestionUsuariosScreen';
 import CrearUsuarioScreen from '../screens/admin/CrearUsuarioScreen';
+import EditarUsuarioScreen from '../screens/admin/EditarUsuarioScreen';
 import ReportesScreen from '../screens/admin/ReportesScreen';
 import ConfiguracionScreen from '../screens/admin/ConfiguracionScreen';
 
@@ -23,6 +24,7 @@ const UsuariosStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="ListaUsuarios" component={GestionUsuariosScreen} />
     <Stack.Screen name="CrearUsuario" component={CrearUsuarioScreen} />
+    <Stack.Screen name="EditarUsuario" component={EditarUsuarioScreen} />
   </Stack.Navigator>
 );
 

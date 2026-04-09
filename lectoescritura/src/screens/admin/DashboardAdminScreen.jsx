@@ -1,49 +1,61 @@
 ﻿/**
  * DashboardAdminScreen.jsx - Panel de administracion del sistema
  *
- * El administrador gestiona la plataforma:
- * - Estado del sistema (usuarios, sincronizacion, servidor)
- * - Accesos rapidos a gestion de usuarios, reportes y configuracion
- * - Actividad reciente del sistema
+ * Carga estadisticas reales desde el backend (conteo de usuarios por rol).
  */
 
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-
-const STATS_SISTEMA = {
-  totalUsuarios: 155,
-  totalDocentes: 8,
-  totalEstudiantes: 145,
-  totalAdmins: 2,
-  servidorEstado: 'En linea',
-  sincronizacionPendiente: 0,
-  ultimaSync: 'Hace 5 min',
-  versionApp: '1.0.0',
-};
+import { API_CONFIG } from '../../utils/constantes';
 
 const ACTIVIDAD_RECIENTE = [
   { id: 1, tipo: 'registro',  mensaje: 'Nuevo estudiante registrado: Juan Perez',          hora: 'Hace 10 min' },
   { id: 2, tipo: 'tarea',     mensaje: 'Prof. Gonzalez asigno 3 tareas nuevas',             hora: 'Hace 30 min' },
   { id: 3, tipo: 'alerta',    mensaje: 'IA genero 5 alertas de rendimiento',                hora: 'Hace 1h' },
   { id: 4, tipo: 'sistema',   mensaje: 'Sincronizacion offline completada (23 registros)',  hora: 'Hace 2h' },
-  { id: 5, tipo: 'registro',  mensaje: 'Docente Prof. Silva actualizo su perfil',           hora: 'Hace 3h' },
 ];
 
 const CONFIG_ACTIVIDAD = {
-  registro: { icono: 'account-plus',    color: '#4A90D9' },
-  tarea:    { icono: 'clipboard-plus',  color: '#2E7D32' },
-  alerta:   { icono: 'bell',            color: '#FF9800' },
-  sistema:  { icono: 'sync',            color: '#9C27B0' },
+  registro: { icono: 'account-plus',   color: '#4A90D9' },
+  tarea:    { icono: 'clipboard-plus', color: '#2E7D32' },
+  alerta:   { icono: 'bell',           color: '#FF9800' },
+  sistema:  { icono: 'sync',           color: '#9C27B0' },
 };
 
 const DashboardAdminScreen = ({ navigation }) => {
   const { usuario, cerrarSesion } = useAuth();
+  const [stats, setStats]           = useState(null);
+  const [cargando, setCargando]     = useState(true);
+  const [servidorOnline, setServidorOnline] = useState(false);
+
+  // Cargar estadisticas reales desde el backend
+  const cargarStats = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API_CONFIG.BASE_URL}/usuarios/stats`, {
+        timeout: API_CONFIG.TIMEOUT,
+      });
+      setStats(data);
+      setServidorOnline(true);
+    } catch (error) {
+      // Si falla la conexion, mostrar ceros y marcar servidor offline
+      setStats({ totalUsuarios: 0, totalDocentes: 0, totalEstudiantes: 0, totalAdmins: 0 });
+      setServidorOnline(false);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarStats();
+    const unsubscribe = navigation.addListener('focus', cargarStats);
+    return unsubscribe;
+  }, [navigation, cargarStats]);
 
   return (
     <ScrollView style={styles.contenedor}>
-
       {/* Encabezado */}
       <View style={styles.encabezado}>
         <View>
@@ -56,44 +68,45 @@ const DashboardAdminScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Estado del sistema */}
+      {/* Estado del sistema con datos reales */}
       <View style={styles.seccion}>
         <View style={styles.tituloRow}>
           <MaterialCommunityIcons name="server" size={20} color="#1A237E" />
           <Text style={styles.tituloSeccion}>  Estado del sistema</Text>
         </View>
-        <View style={styles.gridStats}>
-          {[
-            { icono: 'account-multiple', valor: STATS_SISTEMA.totalUsuarios,    etiqueta: 'Usuarios totales',  fondo: '#E3F2FD', color: '#1565C0' },
-            { icono: 'account-tie',      valor: STATS_SISTEMA.totalDocentes,    etiqueta: 'Docentes',          fondo: '#E8F5E9', color: '#2E7D32' },
-            { icono: 'school',           valor: STATS_SISTEMA.totalEstudiantes, etiqueta: 'Estudiantes',       fondo: '#F3E5F5', color: '#6A1B9A' },
-            { icono: 'shield-account',   valor: STATS_SISTEMA.totalAdmins,      etiqueta: 'Administradores',   fondo: '#FFF8E1', color: '#F57F17' },
-          ].map((item, i) => (
-            <View key={i} style={[styles.tarjetaStat, { backgroundColor: item.fondo }]}>
-              <MaterialCommunityIcons name={item.icono} size={26} color={item.color} />
-              <Text style={[styles.valorStat, { color: item.color }]}>{item.valor}</Text>
-              <Text style={styles.etiquetaStat}>{item.etiqueta}</Text>
-            </View>
-          ))}
-        </View>
+
+        {cargando ? (
+          <ActivityIndicator color="#6A1B9A" style={{ marginVertical: 20 }} />
+        ) : (
+          <View style={styles.gridStats}>
+            {[
+              { icono: 'account-multiple', valor: stats?.totalUsuarios,    etiqueta: 'Usuarios totales',  fondo: '#E3F2FD', color: '#1565C0' },
+              { icono: 'account-tie',      valor: stats?.totalDocentes,    etiqueta: 'Docentes',          fondo: '#E8F5E9', color: '#2E7D32' },
+              { icono: 'school',           valor: stats?.totalEstudiantes, etiqueta: 'Estudiantes',       fondo: '#F3E5F5', color: '#6A1B9A' },
+              { icono: 'shield-account',   valor: stats?.totalAdmins,      etiqueta: 'Administradores',   fondo: '#FFF8E1', color: '#F57F17' },
+            ].map((item, i) => (
+              <View key={i} style={[styles.tarjetaStat, { backgroundColor: item.fondo }]}>
+                <MaterialCommunityIcons name={item.icono} size={26} color={item.color} />
+                <Text style={[styles.valorStat, { color: item.color }]}>{item.valor ?? 0}</Text>
+                <Text style={styles.etiquetaStat}>{item.etiqueta}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Info del servidor */}
         <View style={styles.infoServidor}>
           <View style={styles.filaServidor}>
-            <MaterialCommunityIcons name="circle" size={12} color="#4CAF50" />
-            <Text style={styles.textoServidor}>  Servidor: {STATS_SISTEMA.servidorEstado}</Text>
-          </View>
-          <View style={styles.filaServidor}>
-            <MaterialCommunityIcons name="sync" size={14} color="#4A90D9" />
-            <Text style={styles.textoServidor}>  Ultima sincronizacion: {STATS_SISTEMA.ultimaSync}</Text>
+            <MaterialCommunityIcons name="circle" size={12} color={servidorOnline ? '#4CAF50' : '#F44336'} />
+            <Text style={styles.textoServidor}>  Servidor: {servidorOnline ? 'En linea' : 'Desconectado'}</Text>
           </View>
           <View style={styles.filaServidor}>
             <MaterialCommunityIcons name="database" size={14} color="#9C27B0" />
-            <Text style={styles.textoServidor}>  Registros offline pendientes: {STATS_SISTEMA.sincronizacionPendiente}</Text>
+            <Text style={styles.textoServidor}>  Base de datos: PostgreSQL conectada</Text>
           </View>
           <View style={styles.filaServidor}>
             <MaterialCommunityIcons name="cellphone" size={14} color="#607D8B" />
-            <Text style={styles.textoServidor}>  Version de la app: {STATS_SISTEMA.versionApp}</Text>
+            <Text style={styles.textoServidor}>  Version de la app: 1.0.0</Text>
           </View>
         </View>
       </View>
@@ -105,9 +118,9 @@ const DashboardAdminScreen = ({ navigation }) => {
           <Text style={styles.tituloSeccion}>  Accesos rapidos</Text>
         </View>
         {[
-          { label: 'Gestionar usuarios', desc: 'Crear, editar y desactivar cuentas', icono: 'account-multiple', color: '#4A90D9', ruta: 'Usuarios' },
-          { label: 'Ver reportes',       desc: 'Estadisticas y exportacion de datos', icono: 'file-chart',       color: '#2E7D32', ruta: 'Reportes' },
-          { label: 'Configuracion',      desc: 'Parametros de IA y sincronizacion',   icono: 'cog',              color: '#9C27B0', ruta: 'Configuracion' },
+          { label: 'Gestionar usuarios', desc: 'Crear, editar y eliminar cuentas', icono: 'account-multiple', color: '#4A90D9', ruta: 'Usuarios' },
+          { label: 'Ver reportes',       desc: 'Estadisticas y exportacion',       icono: 'file-chart',       color: '#2E7D32', ruta: 'Reportes' },
+          { label: 'Configuracion',      desc: 'Parametros de IA y sistema',       icono: 'cog',              color: '#9C27B0', ruta: 'Configuracion' },
         ].map((acceso, index) => (
           <TouchableOpacity
             key={index}

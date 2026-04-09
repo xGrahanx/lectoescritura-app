@@ -1,0 +1,33 @@
+// schema.prisma - Modelos de la base de datos
+// Prisma genera las tablas en PostgreSQL a partir de estos modelos
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabla de usuarios del sistema
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  apellido  String
+  correo    String   @unique  // No puede haber dos usuarios con el mismo correo
+  password  String            // Guardada con hash bcrypt
+  rol       Rol      @default(estudiante)
+  grado     String?           // Solo para estudiantes
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+// Roles disponibles en el sistema
+enum Rol {
+  estudiante
+  docente
+  administrador
+}

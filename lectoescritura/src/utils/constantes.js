@@ -46,10 +46,9 @@ export const COLORES = {
 };
 
 // ─── CONFIGURACIÓN DE LA API ──────────────────────────────────────────────────
+// Cambia EXPO_PUBLIC_API_URL en el archivo .env con la IP de tu maquina
+// Ejemplo: EXPO_PUBLIC_API_URL=http://192.168.1.X:3000/api
 export const API_CONFIG = {
-  // Cambiar según el entorno de despliegue
-  BASE_URL: __DEV__
-    ? 'http://10.0.2.2:3000/api'    // Desarrollo (emulador Android)
-    : 'https://tu-servidor.com/api', // Producción
-  TIMEOUT: 10000, // 10 segundos
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.21:3000/api',
+  TIMEOUT: 10000,
 };

@@ -1,11 +1,14 @@
 # Dependencias
 node_modules/
 backend/node_modules/
+lectoescritura/node_modules/
 
 # Variables de entorno (nunca subir al repo)
 .env
 .env.production
 .env.local
+lectoescritura/.env
+backend/.env
 
 # React Native
 android/
