@@ -15,14 +15,49 @@ model Usuario {
   id        Int      @id @default(autoincrement())
   nombre    String
   apellido  String
-  correo    String   @unique  // No puede haber dos usuarios con el mismo correo
-  password  String            // Guardada con hash bcrypt
+  correo    String   @unique
+  password  String
   rol       Rol      @default(estudiante)
-  grado     String?           // Solo para estudiantes
+  grado     String?
   activo    Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
+  // Relaciones con grupos
+  grupoDocente   Grupo[]          @relation("DocenteGrupo")   // grupos que dirige (si es docente)
+  grupoEstudiante GrupoEstudiante[]                           // grupos en los que esta (si es estudiante)
+
   @@map("usuarios")
+}
+
+// Tabla de grupos (secciones)
+// Cada grupo tiene un docente asignado y varios estudiantes
+model Grupo {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique  // Ej: "3er Grado - Seccion A"
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  // Docente responsable del grupo
+  docenteId Int
+  docente   Usuario  @relation("DocenteGrupo", fields: [docenteId], references: [id])
+
+  // Estudiantes del grupo (relacion muchos a muchos)
+  estudiantes GrupoEstudiante[]
+
+  @@map("grupos")
+}
+
+// Tabla intermedia: relacion muchos a muchos entre grupos y estudiantes
+model GrupoEstudiante {
+  grupoId      Int
+  estudianteId Int
+  asignadoEn   DateTime @default(now())
+
+  grupo      Grupo   @relation(fields: [grupoId],      references: [id])
+  estudiante Usuario @relation(fields: [estudianteId], references: [id])
+
+  @@id([grupoId, estudianteId])  // clave primaria compuesta
+  @@map("grupos_estudiantes")
 }
 
 // Roles disponibles en el sistema

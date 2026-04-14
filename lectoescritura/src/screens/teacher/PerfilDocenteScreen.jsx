@@ -1,21 +1,39 @@
 /**
  * PerfilDocenteScreen.jsx - Perfil del docente
  *
- * Muestra la informacion del docente, configuracion de notificaciones
- * y opciones de la cuenta.
+ * Muestra los datos reales del docente desde el AuthContext.
+ * El conteo de estudiantes se carga desde el backend.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { API_CONFIG } from '../../utils/constantes';
 
 const PerfilDocenteScreen = () => {
   const { usuario, cerrarSesion } = useAuth();
-  const [notifErrores, setNotifErrores] = useState(true);
-  const [notifLogros, setNotifLogros] = useState(true);
-  const [notifInactividad, setNotifInactividad] = useState(true);
+  const [notifErrores, setNotifErrores]               = useState(true);
+  const [notifLogros, setNotifLogros]                 = useState(true);
+  const [notifInactividad, setNotifInactividad]       = useState(true);
   const [notifAltoRendimiento, setNotifAltoRendimiento] = useState(true);
+  const [totalEstudiantes, setTotalEstudiantes]       = useState(0);
+
+  // Cargar conteo real de estudiantes desde el backend
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const { data } = await axios.get(`${API_CONFIG.BASE_URL}/usuarios/estudiantes`, {
+          timeout: API_CONFIG.TIMEOUT,
+        });
+        setTotalEstudiantes(data.length);
+      } catch {
+        setTotalEstudiantes(0);
+      }
+    };
+    cargar();
+  }, []);
 
   const handleCerrarSesion = () => {
     Alert.alert(
@@ -40,11 +58,11 @@ const PerfilDocenteScreen = () => {
       </View>
 
       <View style={styles.estadisticas}>
-        <View style={styles.stat}><Text style={styles.valorStat}>28</Text><Text style={styles.etiquetaStat}>Estudiantes</Text></View>
+        <View style={styles.stat}><Text style={styles.valorStat}>{totalEstudiantes}</Text><Text style={styles.etiquetaStat}>Estudiantes</Text></View>
         <View style={styles.separador} />
-        <View style={styles.stat}><Text style={styles.valorStat}>74%</Text><Text style={styles.etiquetaStat}>Promedio grupo</Text></View>
+        <View style={styles.stat}><Text style={styles.valorStat}>--</Text><Text style={styles.etiquetaStat}>Promedio grupo</Text></View>
         <View style={styles.separador} />
-        <View style={styles.stat}><Text style={styles.valorStat}>12</Text><Text style={styles.etiquetaStat}>Tareas asignadas</Text></View>
+        <View style={styles.stat}><Text style={styles.valorStat}>--</Text><Text style={styles.etiquetaStat}>Tareas asignadas</Text></View>
       </View>
 
       <View style={styles.seccion}>

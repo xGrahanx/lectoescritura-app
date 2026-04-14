@@ -13,7 +13,26 @@ const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// ─── GET /api/usuarios/stats ──────────────────────────────────────────────────
+// ─── GET /api/usuarios/estudiantes ───────────────────────────────────────────
+// Retorna solo los usuarios con rol estudiante y activos
+router.get('/estudiantes', async (req, res) => {
+  try {
+    const estudiantes = await prisma.usuario.findMany({
+      where: { rol: 'estudiante', activo: true },
+      select: {
+        id: true, nombre: true, apellido: true,
+        correo: true, grado: true, creadoEn: true,
+      },
+      orderBy: { nombre: 'asc' },
+    });
+    res.json(estudiantes);
+  } catch (error) {
+    console.error('Error al obtener estudiantes:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
+  }
+});
+
+// ─── GET /api/usuarios/stats ───────────────────────────────────────────────────
 // Retorna conteos por rol para el dashboard del admin
 router.get('/stats', async (req, res) => {
   try {
