@@ -1,6 +1,3 @@
-// schema.prisma - Modelos de la base de datos
-// Prisma genera las tablas en PostgreSQL a partir de estos modelos
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,59 +7,212 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Tabla de usuarios del sistema
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  apellido  String
-  correo    String   @unique
-  password  String
-  rol       Rol      @default(estudiante)
-  grado     String?
-  activo    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
-
-  // Relaciones con grupos
-  grupoDocente   Grupo[]          @relation("DocenteGrupo")   // grupos que dirige (si es docente)
-  grupoEstudiante GrupoEstudiante[]                           // grupos en los que esta (si es estudiante)
+  id                                      Int                    @id @default(autoincrement())
+  nombre                                  String                 @db.VarChar(100)
+  apellido                                String                 @db.VarChar(100)
+  correo                                  String                 @unique @db.VarChar(150)
+  password                                String                 @db.VarChar(255)
+  rol                                     tipo_rol
+  grado                                   String?                @db.VarChar(50)
+  activo                                  Boolean?               @default(true)
+  creado_en                               DateTime?              @default(now()) @db.Timestamp(6)
+  alertas_alertas_docente_idTousuarios    alertas[]              @relation("alertas_docente_idTousuarios")
+  alertas_alertas_estudiante_idTousuarios alertas[]              @relation("alertas_estudiante_idTousuarios")
+  ejercicios_ia                           ejercicios_ia[]
+  grupos                                  Grupo[]
+  grupos_estudiantes                      GrupoEstudiante[]
+  progreso_diario                         progreso_diario[]
+  resultados_escritura                    resultados_escritura[]
+  resultados_lectura                      resultados_lectura[]
+  tareas_tareas_docente_idTousuarios      tareas[]               @relation("tareas_docente_idTousuarios")
+  tareas_tareas_estudiante_idTousuarios   tareas[]               @relation("tareas_estudiante_idTousuarios")
 
   @@map("usuarios")
 }
 
-// Tabla de grupos (secciones)
-// Cada grupo tiene un docente asignado y varios estudiantes
 model Grupo {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique  // Ej: "3er Grado - Seccion A"
-  activo    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
-
-  // Docente responsable del grupo
-  docenteId Int
-  docente   Usuario  @relation("DocenteGrupo", fields: [docenteId], references: [id])
-
-  // Estudiantes del grupo (relacion muchos a muchos)
-  estudiantes GrupoEstudiante[]
+  id                 Int               @id @default(autoincrement())
+  nombre             String            @unique @db.VarChar(100)
+  docente_id         Int?
+  activo             Boolean?          @default(true)
+  creado_en          DateTime?         @default(now()) @db.Timestamp(6)
+  usuarios           Usuario?          @relation(fields: [docente_id], references: [id], onUpdate: NoAction)
+  grupos_estudiantes GrupoEstudiante[]
 
   @@map("grupos")
 }
 
-// Tabla intermedia: relacion muchos a muchos entre grupos y estudiantes
 model GrupoEstudiante {
-  grupoId      Int
-  estudianteId Int
-  asignadoEn   DateTime @default(now())
+  grupo_id      Int
+  estudiante_id Int
+  asignado_en   DateTime? @default(now()) @db.Timestamp(6)
+  usuarios      Usuario   @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  grupos        Grupo     @relation(fields: [grupo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  grupo      Grupo   @relation(fields: [grupoId],      references: [id])
-  estudiante Usuario @relation(fields: [estudianteId], references: [id])
-
-  @@id([grupoId, estudianteId])  // clave primaria compuesta
+  @@id([grupo_id, estudiante_id])
   @@map("grupos_estudiantes")
 }
 
-// Roles disponibles en el sistema
+model alertas {
+  id                                       Int         @id @default(autoincrement())
+  docente_id                               Int?
+  estudiante_id                            Int?
+  tipo                                     tipo_alerta
+  titulo                                   String?     @db.VarChar(200)
+  mensaje                                  String?
+  leida                                    Boolean?    @default(false)
+  creado_en                                DateTime?   @default(now()) @db.Timestamp(6)
+  usuarios_alertas_docente_idTousuarios    Usuario?    @relation("alertas_docente_idTousuarios", fields: [docente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_alertas_estudiante_idTousuarios Usuario?    @relation("alertas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model configuracion_sistema {
+  id                      Int       @id @default(autoincrement())
+  umbral_alto_rendimiento Int?      @default(80)
+  umbral_bajo_rendimiento Int?      @default(60)
+  dias_inactividad_alerta Int?      @default(3)
+  notif_activas           Boolean?  @default(true)
+  intervalo_sync_minutos  Int?      @default(30)
+  actualizado_en          DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model ejercicios_escritura {
+  id                   Int                    @id @default(autoincrement())
+  titulo               String                 @db.VarChar(100)
+  tipo                 tipo_ejercicio
+  descripcion          String?
+  contenido            String?
+  nivel                tipo_nivel
+  creado_en            DateTime?              @default(now()) @db.Timestamp(6)
+  resultados_escritura resultados_escritura[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ejercicios_ia {
+  id            Int       @id @default(autoincrement())
+  estudiante_id Int?
+  tipo          tipo_ia
+  preguntas     Json
+  respuestas    Json?
+  puntaje       Int?
+  creado_en     DateTime? @default(now()) @db.Timestamp(6)
+  usuarios      Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model progreso_diario {
+  id                     Int       @id @default(autoincrement())
+  estudiante_id          Int?
+  fecha                  DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  puntaje_promedio       Int?
+  ejercicios_completados Int?      @default(0)
+  racha_dias             Int?      @default(0)
+  usuarios               Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model resultados_escritura {
+  id                   Int                   @id @default(autoincrement())
+  estudiante_id        Int?
+  ejercicio_id         Int?
+  puntaje              Int?
+  respuesta            String?
+  errores_ortograficos Json?
+  retroalimentacion    String?
+  creado_en            DateTime?             @default(now()) @db.Timestamp(6)
+  ejercicios_escritura ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios             Usuario?              @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model resultados_lectura {
+  id                Int       @id @default(autoincrement())
+  estudiante_id     Int?
+  texto_id          Int?
+  puntaje           Int?
+  respuestas        Json?
+  retroalimentacion String?
+  errores           Json?
+  creado_en         DateTime? @default(now()) @db.Timestamp(6)
+  usuarios          Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  textos            textos?   @relation(fields: [texto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tareas {
+  id                                      Int                @id @default(autoincrement())
+  titulo                                  String             @db.VarChar(100)
+  descripcion                             String
+  tipo                                    tipo_tarea
+  docente_id                              Int?
+  estudiante_id                           Int?
+  fecha_limite                            DateTime?          @db.Date
+  estado                                  tipo_estado_tarea? @default(pendiente)
+  es_avanzada                             Boolean?           @default(false)
+  creado_en                               DateTime?          @default(now()) @db.Timestamp(6)
+  usuarios_tareas_docente_idTousuarios    Usuario?           @relation("tareas_docente_idTousuarios", fields: [docente_id], references: [id], onUpdate: NoAction)
+  usuarios_tareas_estudiante_idTousuarios Usuario?           @relation("tareas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model textos {
+  id                 Int                  @id @default(autoincrement())
+  titulo             String               @db.VarChar(100)
+  autor              String               @db.VarChar(100)
+  contenido          String
+  nivel              tipo_nivel
+  activo             Boolean?             @default(true)
+  creado_en          DateTime?            @default(now()) @db.Timestamp(6)
+  resultados_lectura resultados_lectura[]
+}
+
 enum Rol {
   estudiante
   docente
   administrador
+}
+
+enum tipo_alerta {
+  error
+  logro
+  inactividad
+  mejora
+  alto_rendimiento
+}
+
+enum tipo_ejercicio {
+  dictado
+  completar
+  libre
+  copia
+}
+
+enum tipo_estado_tarea {
+  pendiente
+  completada
+  vencida
+}
+
+enum tipo_ia {
+  sinonimos
+  oraciones
+  acentuacion
+  comprension
+}
+
+enum tipo_nivel {
+  basico
+  intermedio
+  avanzado
+}
+
+enum tipo_rol {
+  estudiante
+  docente
+  administrador
+}
+
+enum tipo_tarea {
+  lectura
+  escritura
+  especial
+  ia
 }

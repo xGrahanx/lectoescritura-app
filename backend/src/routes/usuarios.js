@@ -1,4 +1,4 @@
-/**
+﻿/**
  * usuarios.js - Rutas para gestion de usuarios
  *
  * GET    /api/usuarios         - Listar todos los usuarios
@@ -13,7 +13,7 @@ const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// ─── GET /api/usuarios/estudiantes ───────────────────────────────────────────
+// â”€â”€â”€ GET /api/usuarios/estudiantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Retorna solo los usuarios con rol estudiante y activos
 router.get('/estudiantes', async (req, res) => {
   try {
@@ -21,7 +21,7 @@ router.get('/estudiantes', async (req, res) => {
       where: { rol: 'estudiante', activo: true },
       select: {
         id: true, nombre: true, apellido: true,
-        correo: true, grado: true, creadoEn: true,
+        correo: true, grado: true, creado_en: true,
       },
       orderBy: { nombre: 'asc' },
     });
@@ -32,7 +32,7 @@ router.get('/estudiantes', async (req, res) => {
   }
 });
 
-// ─── GET /api/usuarios/stats ───────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/usuarios/stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Retorna conteos por rol para el dashboard del admin
 router.get('/stats', async (req, res) => {
   try {
@@ -54,11 +54,11 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// ─── GET /api/usuarios ────────────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/usuarios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Retorna todos los usuarios sin incluir la password
 router.get('/', async (req, res) => {
   try {
-    // Solo retorna usuarios activos — los inactivos (soft deleted) no existen para la app
+    // Solo retorna usuarios activos â€” los inactivos (soft deleted) no existen para la app
     const usuarios = await prisma.usuario.findMany({
       where: { activo: true },
       select: {
@@ -69,10 +69,10 @@ router.get('/', async (req, res) => {
         rol: true,
         grado: true,
         activo: true,
-        creadoEn: true,
+        creado_en: true,
         // password excluida intencionalmente
       },
-      orderBy: { creadoEn: 'desc' },
+      orderBy: { creado_en: 'desc' },
     });
     res.json(usuarios);
   } catch (error) {
@@ -81,12 +81,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ─── POST /api/usuarios ───────────────────────────────────────────────────────
+// â”€â”€â”€ POST /api/usuarios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Crea un nuevo usuario con validacion de campos
 router.post('/', async (req, res) => {
   const { nombre, apellido, correo, password, rol, grado } = req.body;
 
-  // ── Validaciones ──────────────────────────────────────────────────────────
+  // â”€â”€ Validaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // Campos requeridos
   if (!nombre || !apellido || !correo || !password) {
@@ -147,7 +147,7 @@ router.post('/', async (req, res) => {
         rol: true,
         grado: true,
         activo: true,
-        creadoEn: true,
+        creado_en: true,
       },
     });
 
@@ -161,7 +161,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ─── PUT /api/usuarios/:id ────────────────────────────────────────────────────
+// â”€â”€â”€ PUT /api/usuarios/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Actualiza los datos de un usuario existente
 router.put('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
@@ -224,7 +224,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// ─── DELETE /api/usuarios/:id ─────────────────────────────────────────────────
+// â”€â”€â”€ DELETE /api/usuarios/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Soft delete: marca el usuario como inactivo en vez de eliminarlo fisicamente.
 // El registro permanece en la BD para auditoria e historial.
 // Solo el DBA puede hacer un DELETE real directamente en PostgreSQL.
@@ -255,3 +255,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+

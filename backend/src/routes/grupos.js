@@ -18,20 +18,29 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // ─── GET /api/grupos ──────────────────────────────────────────────────────────
-// Lista todos los grupos activos con su docente y conteo de estudiantes
 router.get('/', async (req, res) => {
   try {
-    const grupos = await prisma.grupo.findMany({
+    const grupos = await prisma.Grupo.findMany({
       where: { activo: true },
       include: {
-        docente: {
+        usuarios: {
           select: { id: true, nombre: true, apellido: true, correo: true },
         },
-        _count: { select: { estudiantes: true } },
+        _count: { select: { grupos_estudiantes: true } },
       },
       orderBy: { nombre: 'asc' },
     });
-    res.json(grupos);
+
+    // Normalizar la respuesta para que la app reciba el formato esperado
+    const resultado = grupos.map(g => ({
+      id: g.id,
+      nombre: g.nombre,
+      activo: g.activo,
+      docente: g.usuarios,
+      _count: { estudiantes: g._count.grupos_estudiantes },
+    }));
+
+    res.json(resultado);
   } catch (error) {
     console.error('Error al obtener grupos:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -39,7 +48,6 @@ router.get('/', async (req, res) => {
 });
 
 // ─── GET /api/grupos/docente/:docenteId ───────────────────────────────────────
-// Retorna los grupos asignados a un docente especifico con sus estudiantes
 router.get('/docente/:docenteId', async (req, res) => {
   const docenteId = parseInt(req.params.docenteId);
   if (isNaN(docenteId)) {
@@ -47,21 +55,37 @@ router.get('/docente/:docenteId', async (req, res) => {
   }
 
   try {
-    const grupos = await prisma.grupo.findMany({
-      where: { docenteId, activo: true },
+    const grupos = await prisma.Grupo.findMany({
+      where: { docente_id: docenteId, activo: true },
       include: {
-        estudiantes: {
+        usuarios: {
+          select: { id: true, nombre: true, apellido: true },
+        },
+        grupos_estudiantes: {
           include: {
-            estudiante: {
+            usuarios: {
               select: { id: true, nombre: true, apellido: true, correo: true, grado: true },
             },
           },
         },
-        _count: { select: { estudiantes: true } },
+        _count: { select: { grupos_estudiantes: true } },
       },
       orderBy: { nombre: 'asc' },
     });
-    res.json(grupos);
+
+    // Normalizar para que la app reciba el formato esperado
+    const resultado = grupos.map(g => ({
+      id: g.id,
+      nombre: g.nombre,
+      docente: g.usuarios,
+      _count: { estudiantes: g._count.grupos_estudiantes },
+      estudiantes: g.grupos_estudiantes.map(ge => ({
+        estudianteId: ge.estudiante_id,
+        estudiante: ge.usuarios,
+      })),
+    }));
+
+    res.json(resultado);
   } catch (error) {
     console.error('Error al obtener grupos del docente:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -69,21 +93,20 @@ router.get('/docente/:docenteId', async (req, res) => {
 });
 
 // ─── GET /api/grupos/:id ──────────────────────────────────────────────────────
-// Detalle de un grupo con lista completa de estudiantes
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID invalido' });
 
   try {
-    const grupo = await prisma.grupo.findUnique({
+    const grupo = await prisma.Grupo.findUnique({
       where: { id },
       include: {
-        docente: {
+        usuarios: {
           select: { id: true, nombre: true, apellido: true, correo: true },
         },
-        estudiantes: {
+        grupos_estudiantes: {
           include: {
-            estudiante: {
+            usuarios: {
               select: { id: true, nombre: true, apellido: true, correo: true, grado: true },
             },
           },
@@ -92,7 +115,16 @@ router.get('/:id', async (req, res) => {
     });
 
     if (!grupo) return res.status(404).json({ mensaje: 'Grupo no encontrado' });
-    res.json(grupo);
+
+    res.json({
+      id: grupo.id,
+      nombre: grupo.nombre,
+      docente: grupo.usuarios,
+      estudiantes: grupo.grupos_estudiantes.map(ge => ({
+        estudianteId: ge.estudiante_id,
+        estudiante: ge.usuarios,
+      })),
+    });
   } catch (error) {
     console.error('Error al obtener grupo:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -100,7 +132,6 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─── POST /api/grupos ─────────────────────────────────────────────────────────
-// Crea un nuevo grupo y lo asigna a un docente
 router.post('/', async (req, res) => {
   const { nombre, docenteId } = req.body;
 
@@ -109,29 +140,35 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Verificar que el docente existe y tiene rol docente
-    const docente = await prisma.usuario.findFirst({
+    const docente = await prisma.Usuario.findFirst({
       where: { id: parseInt(docenteId), rol: 'docente', activo: true },
     });
     if (!docente) {
       return res.status(404).json({ mensaje: 'Docente no encontrado o inactivo' });
     }
 
-    // Verificar que el nombre del grupo no exista
-    const grupoExistente = await prisma.grupo.findUnique({ where: { nombre } });
+    const grupoExistente = await prisma.Grupo.findUnique({ where: { nombre } });
     if (grupoExistente) {
       return res.status(409).json({ mensaje: 'Ya existe un grupo con ese nombre' });
     }
 
-    const nuevoGrupo = await prisma.grupo.create({
-      data: { nombre, docenteId: parseInt(docenteId) },
+    const nuevoGrupo = await prisma.Grupo.create({
+      data: { nombre, docente_id: parseInt(docenteId) },
       include: {
-        docente: { select: { id: true, nombre: true, apellido: true } },
-        _count: { select: { estudiantes: true } },
+        usuarios: { select: { id: true, nombre: true, apellido: true } },
+        _count: { select: { grupos_estudiantes: true } },
       },
     });
 
-    res.status(201).json({ mensaje: 'Grupo creado exitosamente', grupo: nuevoGrupo });
+    res.status(201).json({
+      mensaje: 'Grupo creado exitosamente',
+      grupo: {
+        id: nuevoGrupo.id,
+        nombre: nuevoGrupo.nombre,
+        docente: nuevoGrupo.usuarios,
+        _count: { estudiantes: nuevoGrupo._count.grupos_estudiantes },
+      },
+    });
   } catch (error) {
     console.error('Error al crear grupo:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -139,7 +176,6 @@ router.post('/', async (req, res) => {
 });
 
 // ─── PUT /api/grupos/:id ──────────────────────────────────────────────────────
-// Actualiza el nombre o el docente asignado al grupo
 router.put('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { nombre, docenteId } = req.body;
@@ -147,30 +183,37 @@ router.put('/:id', async (req, res) => {
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID invalido' });
 
   try {
-    const grupo = await prisma.grupo.findUnique({ where: { id } });
+    const grupo = await prisma.Grupo.findUnique({ where: { id } });
     if (!grupo) return res.status(404).json({ mensaje: 'Grupo no encontrado' });
 
-    // Si se cambia el docente, verificar que existe
     if (docenteId) {
-      const docente = await prisma.usuario.findFirst({
+      const docente = await prisma.Usuario.findFirst({
         where: { id: parseInt(docenteId), rol: 'docente', activo: true },
       });
       if (!docente) return res.status(404).json({ mensaje: 'Docente no encontrado' });
     }
 
-    const grupoActualizado = await prisma.grupo.update({
+    const grupoActualizado = await prisma.Grupo.update({
       where: { id },
       data: {
         ...(nombre    && { nombre }),
-        ...(docenteId && { docenteId: parseInt(docenteId) }),
+        ...(docenteId && { docente_id: parseInt(docenteId) }),
       },
       include: {
-        docente: { select: { id: true, nombre: true, apellido: true } },
-        _count: { select: { estudiantes: true } },
+        usuarios: { select: { id: true, nombre: true, apellido: true } },
+        _count: { select: { grupos_estudiantes: true } },
       },
     });
 
-    res.json({ mensaje: 'Grupo actualizado', grupo: grupoActualizado });
+    res.json({
+      mensaje: 'Grupo actualizado',
+      grupo: {
+        id: grupoActualizado.id,
+        nombre: grupoActualizado.nombre,
+        docente: grupoActualizado.usuarios,
+        _count: { estudiantes: grupoActualizado._count.grupos_estudiantes },
+      },
+    });
   } catch (error) {
     console.error('Error al actualizar grupo:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -178,7 +221,6 @@ router.put('/:id', async (req, res) => {
 });
 
 // ─── POST /api/grupos/:id/estudiantes ─────────────────────────────────────────
-// Agrega un estudiante al grupo
 router.post('/:id/estudiantes', async (req, res) => {
   const grupoId      = parseInt(req.params.id);
   const estudianteId = parseInt(req.body.estudianteId);
@@ -188,27 +230,26 @@ router.post('/:id/estudiantes', async (req, res) => {
   }
 
   try {
-    // Verificar que el estudiante existe y tiene rol estudiante
-    const estudiante = await prisma.usuario.findFirst({
+    const estudiante = await prisma.Usuario.findFirst({
       where: { id: estudianteId, rol: 'estudiante', activo: true },
     });
     if (!estudiante) {
       return res.status(404).json({ mensaje: 'Estudiante no encontrado' });
     }
 
-    // Verificar que el grupo existe
-    const grupo = await prisma.grupo.findUnique({ where: { id: grupoId } });
+    const grupo = await prisma.Grupo.findUnique({ where: { id: grupoId } });
     if (!grupo) return res.status(404).json({ mensaje: 'Grupo no encontrado' });
 
-    // Verificar que el estudiante no este ya en el grupo
-    const yaEnGrupo = await prisma.grupoEstudiante.findUnique({
-      where: { grupoId_estudianteId: { grupoId, estudianteId } },
+    const yaEnGrupo = await prisma.GrupoEstudiante.findUnique({
+      where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
     });
     if (yaEnGrupo) {
       return res.status(409).json({ mensaje: 'El estudiante ya pertenece a este grupo' });
     }
 
-    await prisma.grupoEstudiante.create({ data: { grupoId, estudianteId } });
+    await prisma.GrupoEstudiante.create({
+      data: { grupo_id: grupoId, estudiante_id: estudianteId },
+    });
 
     res.status(201).json({
       mensaje: `${estudiante.nombre} ${estudiante.apellido} agregado al grupo exitosamente`,
@@ -220,7 +261,6 @@ router.post('/:id/estudiantes', async (req, res) => {
 });
 
 // ─── DELETE /api/grupos/:id/estudiantes/:estudianteId ─────────────────────────
-// Quita un estudiante del grupo
 router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
   const grupoId      = parseInt(req.params.id);
   const estudianteId = parseInt(req.params.estudianteId);
@@ -230,15 +270,15 @@ router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
   }
 
   try {
-    const relacion = await prisma.grupoEstudiante.findUnique({
-      where: { grupoId_estudianteId: { grupoId, estudianteId } },
+    const relacion = await prisma.GrupoEstudiante.findUnique({
+      where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
     });
     if (!relacion) {
       return res.status(404).json({ mensaje: 'El estudiante no pertenece a este grupo' });
     }
 
-    await prisma.grupoEstudiante.delete({
-      where: { grupoId_estudianteId: { grupoId, estudianteId } },
+    await prisma.GrupoEstudiante.delete({
+      where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
     });
 
     res.json({ mensaje: 'Estudiante removido del grupo correctamente' });
@@ -249,16 +289,15 @@ router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
 });
 
 // ─── DELETE /api/grupos/:id ───────────────────────────────────────────────────
-// Soft delete del grupo
 router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID invalido' });
 
   try {
-    const grupo = await prisma.grupo.findUnique({ where: { id } });
+    const grupo = await prisma.Grupo.findUnique({ where: { id } });
     if (!grupo) return res.status(404).json({ mensaje: 'Grupo no encontrado' });
 
-    await prisma.grupo.update({ where: { id }, data: { activo: false } });
+    await prisma.Grupo.update({ where: { id }, data: { activo: false } });
 
     res.json({ mensaje: `Grupo "${grupo.nombre}" eliminado correctamente` });
   } catch (error) {
