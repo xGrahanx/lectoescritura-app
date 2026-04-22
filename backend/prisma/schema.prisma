@@ -86,6 +86,7 @@ model ejercicios_escritura {
   nivel                tipo_nivel
   creado_en            DateTime?              @default(now()) @db.Timestamp(6)
   resultados_escritura resultados_escritura[]
+  tareas               tareas[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -145,12 +146,16 @@ model tareas {
   tipo                                    tipo_tarea
   docente_id                              Int?
   estudiante_id                           Int?
+  texto_id                                Int?
+  ejercicio_id                            Int?
   fecha_limite                            DateTime?          @db.Date
   estado                                  tipo_estado_tarea? @default(pendiente)
   es_avanzada                             Boolean?           @default(false)
   creado_en                               DateTime?          @default(now()) @db.Timestamp(6)
   usuarios_tareas_docente_idTousuarios    Usuario?           @relation("tareas_docente_idTousuarios", fields: [docente_id], references: [id], onUpdate: NoAction)
   usuarios_tareas_estudiante_idTousuarios Usuario?           @relation("tareas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  textos                                  textos?            @relation(fields: [texto_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  ejercicios_escritura                    ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 model textos {
@@ -162,6 +167,7 @@ model textos {
   activo             Boolean?             @default(true)
   creado_en          DateTime?            @default(now()) @db.Timestamp(6)
   resultados_lectura resultados_lectura[]
+  tareas             tareas[]
 }
 
 enum Rol {

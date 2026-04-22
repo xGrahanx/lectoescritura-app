@@ -6,25 +6,52 @@
  * retroalimentacion personalizada. Los resultados se envian al docente.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_CONFIG } from '../../utils/constantes';
 
 const PREGUNTAS_EJEMPLO = [
-  { id: 1, tipo: 'opcion_multiple', pregunta: 'Cual es el tema principal del texto?', opciones: ['La amistad', 'La imaginacion infantil', 'Los viajes espaciales', 'Los animales'], respuestaCorrecta: 1 },
-  { id: 2, tipo: 'verdadero_falso', pregunta: 'El narrador dibujo una boa que se comio un elefante.', respuestaCorrecta: true },
-  { id: 3, tipo: 'respuesta_abierta', pregunta: 'Que crees que quiso decir el autor con "Lo esencial es invisible a los ojos"? Explica con tus propias palabras.' },
+  { id: 1, tipo: 'opcion_multiple', pregunta: '¿Cuál es el tema principal del texto?', opciones: ['La amistad', 'La imaginación infantil', 'Los viajes espaciales', 'Los animales'], respuestaCorrecta: 1 },
+  { id: 2, tipo: 'verdadero_falso', pregunta: 'El narrador dibujó una boa que se comió un elefante.', respuestaCorrecta: true },
+  { id: 3, tipo: 'respuesta_abierta', pregunta: '¿Qué crees que quiso decir el autor con "Lo esencial es invisible a los ojos"? Explica con tus propias palabras.' },
 ];
 
 const EjercicioLecturaScreen = ({ route, navigation }) => {
-  const { texto } = route.params;
-  const [fase, setFase] = useState('lectura'); // 'lectura' | 'preguntas' | 'resultado'
+  const { textoId, tareaId } = route.params || {};
+  const [texto, setTexto]     = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [fase, setFase]       = useState('lectura');
   const [respuestas, setRespuestas] = useState({});
-  const [evaluando, setEvaluando] = useState(false);
-  const [resultado, setResultado] = useState(null);
+  const [evaluando, setEvaluando]   = useState(false);
+  const [resultado, setResultado]   = useState(null);
+
+  useEffect(() => {
+    const cargarTexto = async () => {
+      if (!textoId) {
+        setCargando(false);
+        return;
+      }
+      try {
+        const { data } = await axios.get(
+          `${API_CONFIG.BASE_URL}/textos/${textoId}`,
+          { timeout: API_CONFIG.TIMEOUT }
+        );
+        setTexto(data);
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo cargar el texto.', [
+          { text: 'Volver', onPress: () => navigation.goBack() },
+        ]);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargarTexto();
+  }, [textoId]);
 
   const guardarRespuesta = (preguntaId, respuesta) => {
     setRespuestas(prev => ({ ...prev, [preguntaId]: respuesta }));
@@ -54,6 +81,25 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
     }
   };
 
+  // --- CARGANDO ----------------------------------------------------------------
+  if (cargando) {
+    return (
+      <View style={styles.centrado}>
+        <ActivityIndicator size="large" color="#4A90D9" />
+        <Text style={styles.textoCargando}>Cargando texto...</Text>
+      </View>
+    );
+  }
+
+  if (!texto) {
+    return (
+      <View style={styles.centrado}>
+        <MaterialCommunityIcons name="book-off" size={48} color="#BDBDBD" />
+        <Text style={styles.textoCargando}>Texto no disponible</Text>
+      </View>
+    );
+  }
+
   // --- FASE: LECTURA -----------------------------------------------------------
   if (fase === 'lectura') {
     return (
@@ -69,9 +115,7 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
         </View>
         <ScrollView style={styles.scrollTexto}>
           <Text style={styles.autorTexto}>por {texto.autor}</Text>
-          <Text style={styles.cuerpoTexto}>
-            {`Cuando yo tenia seis anos vi en un libro sobre la selva virgen que se titulaba "Historias vividas", una magnifica lamina. Representaba una serpiente boa que se tragaba a una fiera.\n\nEn el libro se afirmaba: "Las serpientes boas se tragan su presa entera, sin masticarla. Luego ya no pueden moverse y duermen durante los seis meses que dura su digestion."\n\nReflexione mucho en ese entonces sobre las aventuras de la jungla y a mi vez logre trazar con un lapiz de colores mi primer dibujo.\n\nMostre mi obra de arte a las personas mayores y les pregunte si mi dibujo les daba miedo.\n\nMe respondieron: "Por que habria de asustar un sombrero?"\n\nMi dibujo no representaba un sombrero. Representaba una serpiente boa que digeria un elefante.`}
-          </Text>
+          <Text style={styles.cuerpoTexto}>{texto.contenido}</Text>
           <TouchableOpacity style={styles.botonContinuar} onPress={() => setFase('preguntas')}>
             <Text style={styles.botonTexto}>Responder preguntas</Text>
             <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
@@ -201,6 +245,8 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
+  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F9FF' },
+  textoCargando: { color: '#9E9E9E', marginTop: 12, fontSize: 14 },
   barraTop: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#FFFFFF', padding: 16, paddingTop: 50, elevation: 2,

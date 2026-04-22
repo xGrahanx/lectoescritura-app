@@ -21,6 +21,7 @@ import EscrituraScreen from '../screens/student/EscrituraScreen';
 import EjercicioEscrituraScreen from '../screens/student/EjercicioEscrituraScreen';
 import EjerciciosIAScreen from '../screens/student/EjerciciosIAScreen';
 import ProgresoScreen from '../screens/student/ProgresoScreen';
+import TareasScreen from '../screens/student/TareasScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -56,6 +57,7 @@ const StudentNavigator = () => {
             Escritura: 'pencil',
             EjerciciosIA: 'robot',
             Progreso: 'chart-line',
+            Tareas: 'clipboard-list',
           };
           return (
             <MaterialCommunityIcons
@@ -70,6 +72,7 @@ const StudentNavigator = () => {
       <Tab.Screen name="Inicio" component={InicioEstudianteScreen} options={{ tabBarLabel: 'Inicio' }} />
       <Tab.Screen name="Lectura" component={LecturaStack} options={{ tabBarLabel: 'Lectura' }} />
       <Tab.Screen name="Escritura" component={EscrituraStack} options={{ tabBarLabel: 'Escritura' }} />
+      <Tab.Screen name="Tareas" component={TareasScreen} options={{ tabBarLabel: 'Tareas' }} />
       <Tab.Screen name="EjerciciosIA" component={EjerciciosIAScreen} options={{ tabBarLabel: 'IA' }} />
       <Tab.Screen name="Progreso" component={ProgresoScreen} options={{ tabBarLabel: 'Progreso' }} />
     </Tab.Navigator>

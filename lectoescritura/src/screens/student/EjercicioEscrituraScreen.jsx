@@ -18,7 +18,17 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const EjercicioEscrituraScreen = ({ route, navigation }) => {
-  const { ejercicio } = route.params;
+  const { ejercicio, tarea, tareaId } = route.params || {};
+
+  // Si viene de una tarea, construir el objeto ejercicio desde la tarea
+  const ejercicioActual = ejercicio || {
+    id: tareaId,
+    titulo: tarea?.titulo || 'Ejercicio de escritura',
+    tipo: tarea?.tipo === 'especial' ? 'libre' : (tarea?.tipo || 'libre'),
+    descripcion: tarea?.descripcion || '',
+    icono: 'pencil-box',
+    color: '#E91E63',
+  };
   const [respuesta, setRespuesta] = useState('');
   const [evaluando, setEvaluando] = useState(false);
   const [resultado, setResultado] = useState(null);
@@ -107,20 +117,20 @@ const EjercicioEscrituraScreen = ({ route, navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#424242" />
         </TouchableOpacity>
-        <Text style={styles.tituloBar} numberOfLines={1}>{ejercicio.titulo}</Text>
+        <Text style={styles.tituloBar} numberOfLines={1}>{ejercicioActual.titulo}</Text>
         <View />
       </View>
       <ScrollView style={styles.scroll}>
         <View style={styles.instrucciones}>
-          <MaterialCommunityIcons name={ejercicio.icono} size={32} color={ejercicio.color} />
+          <MaterialCommunityIcons name={ejercicioActual.icono || 'pencil'} size={32} color={ejercicioActual.color || '#E91E63'} />
           <Text style={styles.textoInstrucciones}>
-            {ejercicio.tipo === 'dictado' && 'Escucha el audio y escribe las palabras que escuches. Presta atencion a la ortografia.'}
-            {ejercicio.tipo === 'completar' && 'Lee las oraciones y completa los espacios en blanco con la palabra correcta.'}
-            {ejercicio.tipo === 'libre' && 'Escribe un parrafo sobre el tema indicado. Usa al menos 5 oraciones completas.'}
-            {ejercicio.tipo === 'copia' && 'Copia el siguiente texto con la mayor precision posible, respetando mayusculas y puntuacion.'}
+            {ejercicioActual.tipo === 'dictado' && 'Escucha el audio y escribe las palabras que escuches. Presta atención a la ortografía.'}
+            {ejercicioActual.tipo === 'completar' && 'Lee las oraciones y completa los espacios en blanco con la palabra correcta.'}
+            {(ejercicioActual.tipo === 'libre' || ejercicioActual.tipo === 'especial') && (ejercicioActual.descripcion || 'Escribe un párrafo sobre el tema indicado. Usa al menos 5 oraciones completas.')}
+            {ejercicioActual.tipo === 'copia' && 'Copia el siguiente texto con la mayor precisión posible, respetando mayúsculas y puntuación.'}
           </Text>
         </View>
-        {ejercicio.tipo === 'copia' && (
+        {ejercicioActual.tipo === 'copia' && (
           <View style={styles.textoACopiar}>
             <Text style={styles.etiquetaCopiar}>Texto original:</Text>
             <Text style={styles.contenidoCopiar}>
@@ -128,7 +138,7 @@ const EjercicioEscrituraScreen = ({ route, navigation }) => {
             </Text>
           </View>
         )}
-        {ejercicio.tipo === 'dictado' && (
+        {ejercicioActual.tipo === 'dictado' && (
           <TouchableOpacity style={styles.botonAudio}>
             <MaterialCommunityIcons name="play-circle" size={48} color="#E91E63" />
             <Text style={styles.textoAudio}>Reproducir dictado</Text>
@@ -137,7 +147,7 @@ const EjercicioEscrituraScreen = ({ route, navigation }) => {
         <Text style={styles.etiquetaEscritura}>Tu respuesta:</Text>
         <TextInput
           style={styles.areaEscritura}
-          placeholder={ejercicio.tipo === 'dictado' ? 'Escribe las palabras del dictado aqui...' : 'Escribe aqui...'}
+          placeholder={ejercicioActual.tipo === 'dictado' ? 'Escribe las palabras del dictado aquí...' : 'Escribe aquí...'}
           multiline numberOfLines={8}
           value={respuesta} onChangeText={setRespuesta}
           placeholderTextColor="#BDBDBD" textAlignVertical="top"

@@ -42,11 +42,13 @@ const EstudiantesScreen = ({ navigation }) => {
       const estudiantesExtraidos = [];
       data.forEach(grupo => {
         grupo.estudiantes.forEach(ge => {
+          // Promedio fijo basado en el ID hasta que se implemente el cálculo real
+          const promedioFijo = 50 + (ge.estudiante.id % 40);
           estudiantesExtraidos.push({
             ...ge.estudiante,
             nombre: `${ge.estudiante.nombre} ${ge.estudiante.apellido}`,
             grupo: grupo.nombre,
-            promedio: Math.floor(Math.random() * 60) + 40, // placeholder hasta tabla resultados
+            promedio: promedioFijo,
             activo: true,
             ultimaActividad: 'Sin actividad',
           });
@@ -98,7 +100,12 @@ const EstudiantesScreen = ({ navigation }) => {
       <View style={[styles.promedioContenedor, { backgroundColor: colorRendimiento(item.promedio) + '15' }]}>
         <Text style={[styles.promedioValor, { color: colorRendimiento(item.promedio) }]}>{item.promedio}%</Text>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={20} color="#BDBDBD" />
+      <TouchableOpacity
+        style={styles.botonAsignar}
+        onPress={() => navigation.navigate('AsignarTarea', { estudiante: item })}
+      >
+        <MaterialCommunityIcons name="clipboard-plus" size={20} color="#2E7D32" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -196,6 +203,7 @@ const styles = StyleSheet.create({
   textoActividad: { fontSize: 11, color: '#9E9E9E' },
   promedioContenedor: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 8 },
   promedioValor: { fontSize: 14, fontWeight: 'bold' },
+  botonAsignar: { padding: 6, marginLeft: 4 },
   cargando: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   textoCargando: { color: '#9E9E9E', marginTop: 12 },
   sinResultados: { alignItems: 'center', padding: 40 },

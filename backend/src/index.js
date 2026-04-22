@@ -6,9 +6,13 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const express = require('express');
 const cors = require('cors');
 
-const usuariosRouter = require('./routes/usuarios');
-const authRouter     = require('./routes/auth');
-const gruposRouter   = require('./routes/grupos');
+const usuariosRouter  = require('./routes/usuarios');
+const authRouter      = require('./routes/auth');
+const gruposRouter    = require('./routes/grupos');
+const tareasRouter    = require('./routes/tareas');
+const textosRouter    = require('./routes/textos');
+const ejerciciosRouter = require('./routes/ejercicios');
+const progresoRouter  = require('./routes/progreso');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,9 +20,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/usuarios', usuariosRouter);
-app.use('/api/auth',     authRouter);
-app.use('/api/grupos',   gruposRouter);
+app.use('/api/usuarios',   usuariosRouter);
+app.use('/api/auth',       authRouter);
+app.use('/api/grupos',     gruposRouter);
+app.use('/api/tareas',     tareasRouter);
+app.use('/api/textos',     textosRouter);
+app.use('/api/ejercicios', ejerciciosRouter);
+app.use('/api/progreso',   progresoRouter);
 
 // Ruta de salud para verificar que el servidor esta corriendo
 app.get('/api/health', (req, res) => {

@@ -1,31 +1,84 @@
 /**
  * DetalleEstudianteScreen.jsx - Detalle del rendimiento de un estudiante
- *
- * El docente puede ver el historial completo de actividades, errores frecuentes
- * detectados por la IA, progreso por modulo y asignar tareas adicionales.
  */
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, ActivityIndicator, Alert,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const HISTORIAL_EJEMPLO = [
-  { id: 1, tipo: 'lectura', titulo: 'El Principito - Cap. 1', puntaje: 90, fecha: '01/04/2026' },
-  { id: 2, tipo: 'escritura', titulo: 'Dictado: Animales', puntaje: 65, fecha: '31/03/2026' },
-  { id: 3, tipo: 'ia', titulo: 'Sinonimos', puntaje: 100, fecha: '30/03/2026' },
-  { id: 4, tipo: 'escritura', titulo: 'Escritura libre', puntaje: 72, fecha: '29/03/2026' },
-];
+import axios from 'axios';
+import { API_CONFIG } from '../../utils/constantes';
 
 const ERRORES_FRECUENTES = [
-  { error: 'Omision de tildes en palabras esdrujulas', frecuencia: 8 },
-  { error: 'Confusion entre "b" y "v"', frecuencia: 5 },
-  { error: 'Falta de mayuscula al inicio de oracion', frecuencia: 3 },
+  { error: 'Omisión de tildes en palabras esdrújulas', frecuencia: 8 },
+  { error: 'Confusión entre "b" y "v"', frecuencia: 5 },
+  { error: 'Falta de mayúscula al inicio de oración', frecuencia: 3 },
 ];
 
+const ICONO_TIPO  = { lectura: 'book-open-variant', escritura: 'pencil', ia: 'robot', especial: 'star' };
+const COLOR_TIPO  = { lectura: '#4A90D9', escritura: '#E91E63', ia: '#9C27B0', especial: '#FF9800' };
+const COLOR_ESTADO = { pendiente: '#FF9800', completada: '#4CAF50', vencida: '#F44336' };
+
 const DetalleEstudianteScreen = ({ route, navigation }) => {
-  const { estudiante } = route.params;
-  const [tabActiva, setTabActiva] = useState('resumen');
-  const colorRendimiento = estudiante.promedio >= 80 ? '#4CAF50' : estudiante.promedio >= 60 ? '#FF9800' : '#F44336';
+  const { estudiante }  = route.params;
+  const [tabActiva, setTabActiva]   = useState('resumen');
+  const [tareas, setTareas]         = useState([]);
+  const [cargandoTareas, setCargandoTareas] = useState(false);
+
+  const colorRendimiento = estudiante.promedio >= 80 ? '#4CAF50'
+    : estudiante.promedio >= 60 ? '#FF9800' : '#F44336';
+
+  const cargarTareas = useCallback(async () => {
+    setCargandoTareas(true);
+    try {
+      const { data } = await axios.get(
+        `${API_CONFIG.BASE_URL}/tareas/estudiante/${estudiante.id}`,
+        { timeout: API_CONFIG.TIMEOUT }
+      );
+      setTareas(data);
+    } catch {
+      setTareas([]);
+    } finally {
+      setCargandoTareas(false);
+    }
+  }, [estudiante.id]);
+
+  useEffect(() => {
+    if (tabActiva === 'tareas') cargarTareas();
+  }, [tabActiva, cargarTareas]);
+
+  const eliminarTarea = (tarea) => {
+    Alert.alert(
+      'Eliminar tarea',
+      `¿Seguro que quieres eliminar "${tarea.titulo}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar', style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(
+                `${API_CONFIG.BASE_URL}/tareas/${tarea.id}`,
+                { timeout: API_CONFIG.TIMEOUT }
+              );
+              setTareas(prev => prev.filter(t => t.id !== tarea.id));
+            } catch {
+              Alert.alert('Error', 'No se pudo eliminar la tarea.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'Sin fecha';
+    return new Date(fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const TABS = ['resumen', 'tareas', 'errores'];
 
   return (
     <View style={styles.contenedor}>
@@ -38,46 +91,49 @@ const DetalleEstudianteScreen = ({ route, navigation }) => {
       </View>
 
       <ScrollView>
+        {/* Perfil */}
         <View style={styles.perfilContenedor}>
           <View style={[styles.avatarGrande, { backgroundColor: colorRendimiento + '20' }]}>
-            <Text style={[styles.inicialGrande, { color: colorRendimiento }]}>{estudiante.nombre.charAt(0)}</Text>
+            <Text style={[styles.inicialGrande, { color: colorRendimiento }]}>
+              {estudiante.nombre.charAt(0)}
+            </Text>
           </View>
-          <Text style={styles.nombreEstudiante}>{estudiante.nombre}</Text>
-          <Text style={styles.gradoEstudiante}>{estudiante.grado || '3er Grado'}</Text>
+          <Text style={styles.nombreEstudiante}>{estudiante.nombre} {estudiante.apellido || ''}</Text>
+          <Text style={styles.gradoEstudiante}>{estudiante.grupo || estudiante.grado || ''}</Text>
           <View style={[styles.promedioDestacado, { backgroundColor: colorRendimiento + '15', borderColor: colorRendimiento }]}>
             <Text style={[styles.valorPromedio, { color: colorRendimiento }]}>{estudiante.promedio}%</Text>
             <Text style={styles.etiquetaPromedio}>Promedio general</Text>
           </View>
-          {estudiante.promedio >= 80 && (
-            <TouchableOpacity
-              style={styles.botonAsignarTarea}
-              onPress={() => navigation.navigate('AsignarTarea', { estudiante })}
-            >
-              <MaterialCommunityIcons name="plus-circle" size={18} color="#FFFFFF" />
-              <Text style={styles.textoBotonAsignar}>  Asignar tarea adicional</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.botonAsignarTarea}
+            onPress={() => navigation.navigate('AsignarTarea', { estudiante })}
+          >
+            <MaterialCommunityIcons name="plus-circle" size={18} color="#FFFFFF" />
+            <Text style={styles.textoBotonAsignar}>  Asignar tarea</Text>
+          </TouchableOpacity>
         </View>
 
+        {/* Tabs */}
         <View style={styles.tabs}>
-          {['resumen', 'historial', 'errores'].map(tab => (
+          {TABS.map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, tabActiva === tab && styles.tabActiva]}
               onPress={() => setTabActiva(tab)}
             >
               <Text style={[styles.textoTab, tabActiva === tab && styles.textoTabActivo]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'resumen' ? 'Resumen' : tab === 'tareas' ? 'Tareas' : 'Errores'}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        {/* Tab: Resumen */}
         {tabActiva === 'resumen' && (
           <View style={styles.contenidoTab}>
-            <Text style={styles.tituloSeccion}>Progreso por modulo</Text>
+            <Text style={styles.tituloSeccion}>Progreso por módulo</Text>
             {[
-              { nombre: 'Lectura', progreso: 72, color: '#4A90D9' },
+              { nombre: 'Lectura',  progreso: 72, color: '#4A90D9' },
               { nombre: 'Escritura', progreso: 58, color: '#E91E63' },
               { nombre: 'Ejercicios IA', progreso: 88, color: '#9C27B0' },
             ].map(modulo => (
@@ -90,13 +146,13 @@ const DetalleEstudianteScreen = ({ route, navigation }) => {
                 <Text style={[styles.porcentajeModulo, { color: modulo.color }]}>{modulo.progreso}%</Text>
               </View>
             ))}
-            <Text style={styles.tituloSeccion}>Estadisticas</Text>
+            <Text style={styles.tituloSeccion}>Estadísticas</Text>
             <View style={styles.gridStats}>
               {[
                 { valor: '18', etiqueta: 'Ejercicios completados' },
-                { valor: '5', etiqueta: 'Dias consecutivos' },
+                { valor: '5',  etiqueta: 'Días consecutivos' },
                 { valor: '2h 30m', etiqueta: 'Tiempo total' },
-                { valor: '3', etiqueta: 'Tareas completadas' },
+                { valor: String(tareas.filter(t => t.estado === 'completada').length), etiqueta: 'Tareas completadas' },
               ].map((stat, i) => (
                 <View key={i} style={styles.statItem}>
                   <Text style={styles.valorStat}>{stat.valor}</Text>
@@ -107,32 +163,67 @@ const DetalleEstudianteScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        {tabActiva === 'historial' && (
+        {/* Tab: Tareas */}
+        {tabActiva === 'tareas' && (
           <View style={styles.contenidoTab}>
-            {HISTORIAL_EJEMPLO.map(actividad => (
-              <View key={actividad.id} style={styles.tarjetaHistorial}>
-                <MaterialCommunityIcons
-                  name={actividad.tipo === 'lectura' ? 'book-open-variant' : actividad.tipo === 'escritura' ? 'pencil' : 'robot'}
-                  size={22}
-                  color={actividad.tipo === 'lectura' ? '#4A90D9' : actividad.tipo === 'escritura' ? '#E91E63' : '#9C27B0'}
-                />
-                <View style={styles.infoHistorial}>
-                  <Text style={styles.tituloHistorial}>{actividad.titulo}</Text>
-                  <Text style={styles.fechaHistorial}>{actividad.fecha}</Text>
-                </View>
-                <View style={[styles.puntajeHistorial, { backgroundColor: actividad.puntaje >= 70 ? '#E8F5E9' : '#FFEBEE' }]}>
-                  <Text style={[styles.textoPuntaje, { color: actividad.puntaje >= 70 ? '#2E7D32' : '#C62828' }]}>
-                    {actividad.puntaje}%
-                  </Text>
-                </View>
+            {cargandoTareas ? (
+              <ActivityIndicator color="#2E7D32" style={{ marginVertical: 20 }} />
+            ) : tareas.length === 0 ? (
+              <View style={styles.sinTareas}>
+                <MaterialCommunityIcons name="clipboard-off" size={40} color="#BDBDBD" />
+                <Text style={styles.textoSinTareas}>No hay tareas asignadas</Text>
+                <TouchableOpacity
+                  style={styles.botonAgregarTarea}
+                  onPress={() => navigation.navigate('AsignarTarea', { estudiante })}
+                >
+                  <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
+                  <Text style={styles.textoBotonAgregar}> Asignar primera tarea</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              <>
+                {tareas.map(tarea => (
+                  <View key={tarea.id} style={styles.tarjetaTarea}>
+                    <View style={[styles.iconoTarea, { backgroundColor: (COLOR_TIPO[tarea.tipo] || '#9E9E9E') + '20' }]}>
+                      <MaterialCommunityIcons
+                        name={ICONO_TIPO[tarea.tipo] || 'clipboard'}
+                        size={20}
+                        color={COLOR_TIPO[tarea.tipo] || '#9E9E9E'}
+                      />
+                    </View>
+                    <View style={styles.infoTarea}>
+                      <Text style={styles.tituloTarea} numberOfLines={1}>{tarea.titulo}</Text>
+                      <View style={styles.filaTareaInfo}>
+                        <View style={[styles.estadoBadge, { backgroundColor: (COLOR_ESTADO[tarea.estado] || '#9E9E9E') + '20' }]}>
+                          <Text style={[styles.textoEstado, { color: COLOR_ESTADO[tarea.estado] || '#9E9E9E' }]}>
+                            {tarea.estado}
+                          </Text>
+                        </View>
+                        <Text style={styles.fechaTarea}>{formatearFecha(tarea.fecha_limite)}</Text>
+                      </View>
+                    </View>
+                    {/* Solo se puede eliminar si está pendiente */}
+                    {tarea.estado === 'pendiente' && (
+                      <TouchableOpacity
+                        style={styles.botonEliminar}
+                        onPress={() => eliminarTarea(tarea)}
+                      >
+                        <MaterialCommunityIcons name="trash-can-outline" size={20} color="#F44336" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
           </View>
         )}
 
+        {/* Tab: Errores */}
         {tabActiva === 'errores' && (
           <View style={styles.contenidoTab}>
-            <Text style={styles.descripcionErrores}>Errores frecuentes detectados por la IA en los ultimos 30 dias:</Text>
+            <Text style={styles.descripcionErrores}>
+              Errores frecuentes detectados por la IA en los últimos 30 días:
+            </Text>
             {ERRORES_FRECUENTES.map((item, index) => (
               <View key={index} style={styles.tarjetaError}>
                 <View style={styles.frecuenciaContenedor}>
@@ -144,7 +235,7 @@ const DetalleEstudianteScreen = ({ route, navigation }) => {
             <View style={styles.recomendacionIA}>
               <MaterialCommunityIcons name="robot" size={20} color="#9C27B0" />
               <Text style={styles.textoRecomendacion}>
-                La IA recomienda reforzar ejercicios de acentuacion y ortografia basica para este estudiante.
+                La IA recomienda reforzar ejercicios de acentuación y ortografía básica para este estudiante.
               </Text>
             </View>
           </View>
@@ -185,22 +276,34 @@ const styles = StyleSheet.create({
   barraProgreso: { flex: 1, height: 8, backgroundColor: '#F5F5F5', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' },
   relleno: { height: 8, borderRadius: 4 },
   porcentajeModulo: { fontSize: 13, fontWeight: 'bold', width: 36, textAlign: 'right' },
-  gridStats: { flexDirection: 'row', flexWrap: 'wrap' },
-  statItem: { width: '47%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', elevation: 2, marginBottom: 12 },
-  valorStat: { fontSize: 18, fontWeight: 'bold', color: '#1A237E' },
+  gridStats: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
+  statItem: { width: '47%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', elevation: 2, marginBottom: 4 },
+  valorStat: { fontSize: 20, fontWeight: 'bold', color: '#1A237E' },
   etiquetaStat: { fontSize: 11, color: '#757575', textAlign: 'center', marginTop: 4 },
-  tarjetaHistorial: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 2 },
-  infoHistorial: { flex: 1 },
-  tituloHistorial: { fontSize: 14, fontWeight: '500', color: '#212121' },
-  fechaHistorial: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
-  puntajeHistorial: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  textoPuntaje: { fontSize: 13, fontWeight: 'bold' },
+  // Tareas
+  tarjetaTarea: {
+    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 10, elevation: 2, gap: 10,
+  },
+  iconoTarea: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  infoTarea: { flex: 1 },
+  tituloTarea: { fontSize: 14, fontWeight: '600', color: '#212121', marginBottom: 4 },
+  filaTareaInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  estadoBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  textoEstado: { fontSize: 11, fontWeight: '600' },
+  fechaTarea: { fontSize: 11, color: '#9E9E9E' },
+  botonEliminar: { padding: 6 },
+  sinTareas: { alignItems: 'center', padding: 30 },
+  textoSinTareas: { color: '#9E9E9E', fontSize: 14, marginTop: 10, marginBottom: 16 },
+  botonAgregarTarea: { backgroundColor: '#2E7D32', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center' },
+  textoBotonAgregar: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  // Errores
   descripcionErrores: { fontSize: 13, color: '#757575', marginBottom: 12, lineHeight: 20 },
-  tarjetaError: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 2 },
-  frecuenciaContenedor: { backgroundColor: '#FFEBEE', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  tarjetaError: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 10, elevation: 2, gap: 12 },
+  frecuenciaContenedor: { backgroundColor: '#FFEBEE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
   frecuenciaValor: { fontSize: 13, fontWeight: 'bold', color: '#F44336' },
-  textoError: { flex: 1, fontSize: 13, color: '#424242' },
-  recomendacionIA: { backgroundColor: '#F3E5F5', borderRadius: 12, padding: 14, flexDirection: 'row', marginTop: 8 },
+  textoError: { flex: 1, fontSize: 13, color: '#424242', lineHeight: 20 },
+  recomendacionIA: { backgroundColor: '#F3E5F5', borderRadius: 12, padding: 14, flexDirection: 'row', marginTop: 8, gap: 10, alignItems: 'flex-start' },
   textoRecomendacion: { flex: 1, fontSize: 13, color: '#424242', lineHeight: 20 },
 });
 

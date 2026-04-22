@@ -1,51 +1,126 @@
 /**
  * ProgresoScreen.jsx - Pantalla de progreso del estudiante
- *
- * Muestra estadisticas del rendimiento: puntaje semanal, progreso
- * por modulo, logros obtenidos e historial de actividades recientes.
  */
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_CONFIG } from '../../utils/constantes';
+import { useAuth } from '../../context/AuthContext';
 
-const DATOS_SEMANA = [
-  { dia: 'Lun', puntaje: 70 }, { dia: 'Mar', puntaje: 85 }, { dia: 'Mie', puntaje: 60 },
-  { dia: 'Jue', puntaje: 90 }, { dia: 'Vie', puntaje: 78 }, { dia: 'Sab', puntaje: 95 }, { dia: 'Dom', puntaje: 0 },
-];
-
-const PROGRESO_MODULOS = [
-  { nombre: 'Lectura', progreso: 72, color: '#4A90D9', icono: 'book-open-variant' },
-  { nombre: 'Escritura', progreso: 65, color: '#E91E63', icono: 'pencil' },
-  { nombre: 'Ejercicios IA', progreso: 88, color: '#9C27B0', icono: 'robot' },
-];
-
-const LOGROS = [
-  { id: 1, titulo: 'Primera lectura', icono: 'book-check', obtenido: true },
-  { id: 2, titulo: '5 dias seguidos', icono: 'fire', obtenido: true },
-  { id: 3, titulo: 'Puntaje perfecto', icono: 'star-circle', obtenido: false },
-  { id: 4, titulo: '10 ejercicios', icono: 'trophy', obtenido: false },
-];
-
-const ACTIVIDADES_RECIENTES = [
-  { id: 1, tipo: 'lectura', titulo: 'El Principito - Cap. 1', puntaje: 90, fecha: 'Hoy' },
-  { id: 2, tipo: 'escritura', titulo: 'Dictado: Animales', puntaje: 75, fecha: 'Ayer' },
-  { id: 3, tipo: 'ia', titulo: 'Sinonimos y Antonimos', puntaje: 100, fecha: 'Hace 2 dias' },
-];
+const ALTURA_MAX_BARRA = 100;
+const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const ProgresoScreen = () => {
+  const { usuario } = useAuth();
+  const [resumen, setResumen]             = useState(null);
+  const [progresoDiario, setProgresoDiario] = useState([]);
+  const [resultadosLectura, setResultadosLectura]   = useState([]);
+  const [resultadosEscritura, setResultadosEscritura] = useState([]);
+  const [cargando, setCargando]           = useState(true);
+  const [refrescando, setRefrescando]     = useState(false);
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState('semana');
-  const periodos = ['semana', 'mes', 'total'];
-  const etiquetasPeriodo = { semana: 'Esta semana', mes: 'Este mes', total: 'Total' };
-  const ALTURA_MAX_BARRA = 100;
 
-  const promedio = Math.round(
-    DATOS_SEMANA.filter(d => d.puntaje > 0).reduce((acc, d) => acc + d.puntaje, 0) /
-    DATOS_SEMANA.filter(d => d.puntaje > 0).length
-  );
+  const cargarDatos = useCallback(async () => {
+    try {
+      const [resumenRes, diarioRes, lecturaRes, escrituraRes] = await Promise.all([
+        axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/resumen`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/lectura`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/escritura`, { timeout: API_CONFIG.TIMEOUT }),
+      ]);
+      setResumen(resumenRes.data);
+      setProgresoDiario(diarioRes.data);
+      setResultadosLectura(lecturaRes.data);
+      setResultadosEscritura(escrituraRes.data);
+    } catch (error) {
+      console.error('Error al cargar progreso:', error);
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, [usuario.id]);
+
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  const onRefrescar = () => { setRefrescando(true); cargarDatos(); };
+
+  // Construir datos de la semana actual desde progreso_diario
+  const datosSemana = () => {
+    const hoy = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() - (6 - i));
+      const registro = progresoDiario.find(p => {
+        const d = new Date(p.fecha);
+        return d.toDateString() === fecha.toDateString();
+      });
+      return {
+        dia: DIAS_SEMANA[fecha.getDay()],
+        puntaje: registro?.puntaje_promedio || 0,
+      };
+    });
+  };
+
+  // Últimas actividades combinando lectura y escritura
+  const actividadesRecientes = () => {
+    const lectura = resultadosLectura.slice(0, 3).map(r => ({
+      id: `l-${r.id}`, tipo: 'lectura',
+      titulo: r.textos?.titulo || 'Texto de lectura',
+      puntaje: r.puntaje,
+      fecha: r.creado_en,
+    }));
+    const escritura = resultadosEscritura.slice(0, 3).map(r => ({
+      id: `e-${r.id}`, tipo: 'escritura',
+      titulo: r.ejercicios_escritura?.titulo || 'Ejercicio de escritura',
+      puntaje: r.puntaje,
+      fecha: r.creado_en,
+    }));
+    return [...lectura, ...escritura]
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 5);
+  };
+
+  const formatearFechaRelativa = (fecha) => {
+    if (!fecha) return '';
+    const diff = Math.floor((Date.now() - new Date(fecha)) / 86400000);
+    if (diff === 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    return `Hace ${diff} días`;
+  };
+
+  const progresoModulos = () => {
+    const promsLectura = resultadosLectura.length
+      ? Math.round(resultadosLectura.reduce((s, r) => s + (r.puntaje || 0), 0) / resultadosLectura.length)
+      : 0;
+    const promsEscritura = resultadosEscritura.length
+      ? Math.round(resultadosEscritura.reduce((s, r) => s + (r.puntaje || 0), 0) / resultadosEscritura.length)
+      : 0;
+    return [
+      { nombre: 'Lectura',  progreso: promsLectura,  color: '#4A90D9', icono: 'book-open-variant' },
+      { nombre: 'Escritura', progreso: promsEscritura, color: '#E91E63', icono: 'pencil' },
+    ];
+  };
+
+  if (cargando) {
+    return (
+      <View style={styles.centrado}>
+        <ActivityIndicator size="large" color="#4A90D9" />
+        <Text style={styles.textoCargando}>Cargando progreso...</Text>
+      </View>
+    );
+  }
+
+  const semana = datosSemana();
+  const actividades = actividadesRecientes();
+  const modulos = progresoModulos();
 
   return (
-    <ScrollView style={styles.contenedor}>
+    <ScrollView
+      style={styles.contenedor}
+      refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefrescar} />}
+    >
       <View style={styles.encabezado}>
         <View style={styles.tituloRow}>
           <MaterialCommunityIcons name="chart-line" size={26} color="#1A237E" />
@@ -54,42 +129,45 @@ const ProgresoScreen = () => {
         <Text style={styles.subtitulo}>Sigue tu avance en lectoescritura</Text>
       </View>
 
+      {/* Resumen general */}
       <View style={styles.resumenGeneral}>
         <View style={styles.statResumen}>
-          <Text style={styles.valorResumen}>{promedio}%</Text>
+          <Text style={styles.valorResumen}>{resumen?.promedioGeneral ?? 0}%</Text>
           <Text style={styles.etiquetaResumen}>Promedio</Text>
         </View>
         <View style={styles.separador} />
         <View style={styles.statResumen}>
-          <Text style={styles.valorResumen}>18</Text>
+          <Text style={styles.valorResumen}>{resumen?.totalEjercicios ?? 0}</Text>
           <Text style={styles.etiquetaResumen}>Ejercicios</Text>
         </View>
         <View style={styles.separador} />
         <View style={styles.statResumen}>
           <MaterialCommunityIcons name="fire" size={20} color="#FF9800" />
-          <Text style={styles.valorResumen}>5</Text>
+          <Text style={styles.valorResumen}>{resumen?.rachaDias ?? 0}</Text>
           <Text style={styles.etiquetaResumen}>Racha</Text>
         </View>
       </View>
 
+      {/* Selector de periodo */}
       <View style={styles.selectorPeriodo}>
-        {periodos.map(p => (
+        {['semana', 'mes', 'total'].map(p => (
           <TouchableOpacity
             key={p}
             style={[styles.botonPeriodo, periodoSeleccionado === p && styles.botonPeriodoActivo]}
             onPress={() => setPeriodoSeleccionado(p)}
           >
             <Text style={[styles.textoPeriodo, periodoSeleccionado === p && styles.textoPeriodoActivo]}>
-              {etiquetasPeriodo[p]}
+              {{ semana: 'Esta semana', mes: 'Este mes', total: 'Total' }[p]}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
+      {/* Gráfica de barras semanal */}
       <View style={styles.tarjetaGrafica}>
         <Text style={styles.tituloTarjeta}>Puntaje diario</Text>
         <View style={styles.grafica}>
-          {DATOS_SEMANA.map((item) => (
+          {semana.map((item) => (
             <View key={item.dia} style={styles.columnaGrafica}>
               <Text style={styles.valorBarra}>{item.puntaje > 0 ? item.puntaje : ''}</Text>
               <View style={styles.contenedorBarra}>
@@ -104,9 +182,10 @@ const ProgresoScreen = () => {
         </View>
       </View>
 
+      {/* Progreso por módulo */}
       <View style={styles.tarjetaModulos}>
-        <Text style={styles.tituloTarjeta}>Progreso por modulo</Text>
-        {PROGRESO_MODULOS.map(modulo => (
+        <Text style={styles.tituloTarjeta}>Progreso por módulo</Text>
+        {modulos.map(modulo => (
           <View key={modulo.nombre} style={styles.filaModulo}>
             <MaterialCommunityIcons name={modulo.icono} size={20} color={modulo.color} />
             <Text style={styles.nombreModulo}>{modulo.nombre}</Text>
@@ -119,45 +198,37 @@ const ProgresoScreen = () => {
         ))}
       </View>
 
-      <View style={styles.tituloSeccionRow}>
-        <MaterialCommunityIcons name="trophy" size={20} color="#212121" />
-        <Text style={styles.tituloSeccion}> Logros</Text>
-      </View>
-      <View style={styles.gridLogros}>
-        {LOGROS.map(logro => (
-          <View key={logro.id} style={[styles.tarjetaLogro, !logro.obtenido && styles.logroNoObtenido]}>
-            <MaterialCommunityIcons
-              name={logro.icono}
-              size={28}
-              color={logro.obtenido ? '#FFC107' : '#BDBDBD'}
-            />
-            <Text style={[styles.tituloLogro, !logro.obtenido && styles.textoLogroOpaco]}>{logro.titulo}</Text>
-          </View>
-        ))}
-      </View>
-
+      {/* Actividades recientes */}
       <View style={styles.tituloSeccionRow}>
         <MaterialCommunityIcons name="history" size={20} color="#212121" />
         <Text style={styles.tituloSeccion}> Actividades recientes</Text>
       </View>
-      {ACTIVIDADES_RECIENTES.map(actividad => (
-        <View key={actividad.id} style={styles.tarjetaActividad}>
-          <MaterialCommunityIcons
-            name={actividad.tipo === 'lectura' ? 'book-open-variant' : actividad.tipo === 'escritura' ? 'pencil' : 'robot'}
-            size={22}
-            color={actividad.tipo === 'lectura' ? '#4A90D9' : actividad.tipo === 'escritura' ? '#E91E63' : '#9C27B0'}
-          />
-          <View style={styles.infoActividad}>
-            <Text style={styles.tituloActividad}>{actividad.titulo}</Text>
-            <Text style={styles.fechaActividad}>{actividad.fecha}</Text>
-          </View>
-          <View style={[styles.puntajeActividad, { backgroundColor: actividad.puntaje >= 80 ? '#E8F5E9' : '#FFF8E1' }]}>
-            <Text style={[styles.textoPuntajeActividad, { color: actividad.puntaje >= 80 ? '#2E7D32' : '#F57F17' }]}>
-              {actividad.puntaje}%
-            </Text>
-          </View>
+
+      {actividades.length === 0 ? (
+        <View style={styles.sinActividad}>
+          <MaterialCommunityIcons name="clipboard-text-off" size={36} color="#BDBDBD" />
+          <Text style={styles.textoSinActividad}>Aún no hay actividades registradas</Text>
         </View>
-      ))}
+      ) : (
+        actividades.map(actividad => (
+          <View key={actividad.id} style={styles.tarjetaActividad}>
+            <MaterialCommunityIcons
+              name={actividad.tipo === 'lectura' ? 'book-open-variant' : 'pencil'}
+              size={22}
+              color={actividad.tipo === 'lectura' ? '#4A90D9' : '#E91E63'}
+            />
+            <View style={styles.infoActividad}>
+              <Text style={styles.tituloActividad}>{actividad.titulo}</Text>
+              <Text style={styles.fechaActividad}>{formatearFechaRelativa(actividad.fecha)}</Text>
+            </View>
+            <View style={[styles.puntajeActividad, { backgroundColor: actividad.puntaje >= 80 ? '#E8F5E9' : '#FFF8E1' }]}>
+              <Text style={[styles.textoPuntajeActividad, { color: actividad.puntaje >= 80 ? '#2E7D32' : '#F57F17' }]}>
+                {actividad.puntaje}%
+              </Text>
+            </View>
+          </View>
+        ))
+      )}
 
       <View style={{ height: 20 }} />
     </ScrollView>
@@ -166,6 +237,8 @@ const ProgresoScreen = () => {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
+  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F9FF' },
+  textoCargando: { color: '#9E9E9E', marginTop: 12 },
   encabezado: { backgroundColor: '#FFFFFF', padding: 20, paddingTop: 50 },
   tituloRow: { flexDirection: 'row', alignItems: 'center' },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#1A237E' },
@@ -202,11 +275,8 @@ const styles = StyleSheet.create({
   porcentajeModulo: { fontSize: 13, fontWeight: 'bold', width: 36, textAlign: 'right' },
   tituloSeccionRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 14, marginTop: 4 },
   tituloSeccion: { fontSize: 16, fontWeight: 'bold', color: '#212121' },
-  gridLogros: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 16 },
-  tarjetaLogro: { width: '47%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', elevation: 2, marginBottom: 8 },
-  logroNoObtenido: { backgroundColor: '#F5F5F5', elevation: 0 },
-  tituloLogro: { fontSize: 12, fontWeight: '600', color: '#424242', textAlign: 'center', marginTop: 4 },
-  textoLogroOpaco: { color: '#BDBDBD' },
+  sinActividad: { alignItems: 'center', padding: 30 },
+  textoSinActividad: { color: '#9E9E9E', fontSize: 14, marginTop: 10 },
   tarjetaActividad: {
     backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12,
     borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 2,

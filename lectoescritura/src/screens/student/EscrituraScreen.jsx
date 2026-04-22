@@ -1,59 +1,87 @@
 /**
- * EscrituraScreen.jsx - Modulo de Escritura
+ * EscrituraScreen.jsx - Módulo de Escritura
  *
- * Lista de ejercicios de escritura disponibles:
- * dictados, completar oraciones, escritura libre y copia de textos.
+ * Carga los ejercicios de escritura desde el backend.
+ * Permite filtrar por tipo y nivel.
  */
 
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet, ActivityIndicator, RefreshControl,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_CONFIG } from '../../utils/constantes';
 
-const EJERCICIOS_ESCRITURA = [
-  { id: 1, tipo: 'dictado', titulo: 'Dictado: Animales del bosque', descripcion: '10 palabras relacionadas con animales', icono: 'microphone', color: '#E91E63', dificultad: 'Facil', completado: false },
-  { id: 2, tipo: 'completar', titulo: 'Completa las oraciones', descripcion: 'Rellena los espacios en blanco', icono: 'format-text', color: '#FF9800', dificultad: 'Facil', completado: true, puntaje: 95 },
-  { id: 3, tipo: 'libre', titulo: 'Escritura libre: Mi mascota', descripcion: 'Escribe un parrafo sobre tu mascota favorita', icono: 'pencil-box', color: '#4CAF50', dificultad: 'Medio', completado: false },
-  { id: 4, tipo: 'copia', titulo: 'Copia el texto', descripcion: 'Copia el fragmento con buena ortografia', icono: 'content-copy', color: '#9C27B0', dificultad: 'Medio', completado: false },
-];
+const ICONO_TIPO  = { dictado: 'microphone', completar: 'format-text', libre: 'pencil-box', copia: 'content-copy' };
+const COLOR_TIPO  = { dictado: '#E91E63', completar: '#FF9800', libre: '#4CAF50', copia: '#9C27B0' };
+const COLOR_NIVEL = { basico: '#4CAF50', intermedio: '#FF9800', avanzado: '#F44336' };
 
 const EscrituraScreen = ({ navigation }) => {
-  const [filtro, setFiltro] = useState('Todos');
-  const tipos = ['Todos', 'dictado', 'completar', 'libre', 'copia'];
-  const etiquetasTipos = { Todos: 'Todos', dictado: 'Dictado', completar: 'Completar', libre: 'Libre', copia: 'Copia' };
+  const [ejercicios, setEjercicios]   = useState([]);
+  const [filtroTipo, setFiltroTipo]   = useState('todos');
+  const [cargando, setCargando]       = useState(true);
+  const [refrescando, setRefrescando] = useState(false);
 
-  const ejerciciosFiltrados = filtro === 'Todos'
-    ? EJERCICIOS_ESCRITURA
-    : EJERCICIOS_ESCRITURA.filter(e => e.tipo === filtro);
+  const cargarEjercicios = useCallback(async () => {
+    try {
+      const params = filtroTipo !== 'todos' ? { tipo: filtroTipo } : {};
+      const { data } = await axios.get(`${API_CONFIG.BASE_URL}/ejercicios`, {
+        params,
+        timeout: API_CONFIG.TIMEOUT,
+      });
+      setEjercicios(data);
+    } catch (error) {
+      console.error('Error al cargar ejercicios:', error);
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, [filtroTipo]);
 
-  const renderEjercicio = ({ item }) => (
-    <TouchableOpacity
-      style={styles.tarjeta}
-      onPress={() => navigation.navigate('EjercicioEscritura', { ejercicio: item })}
-    >
-      <View style={[styles.iconoContenedor, { backgroundColor: item.color + '20' }]}>
-        <MaterialCommunityIcons name={item.icono} size={28} color={item.color} />
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.titulo}>{item.titulo}</Text>
-        <Text style={styles.descripcion}>{item.descripcion}</Text>
-        <View style={styles.pie}>
-          <View style={styles.etiquetaDificultad}>
-            <Text style={styles.textoDificultad}>{item.dificultad}</Text>
-          </View>
-          {item.completado && (
-            <View style={styles.puntajeContenedor}>
-              <MaterialCommunityIcons name="star" size={13} color="#FFC107" />
-              <Text style={styles.textoPuntaje}> {item.puntaje}%</Text>
-            </View>
-          )}
+  useEffect(() => { cargarEjercicios(); }, [cargarEjercicios]);
+
+  const onRefrescar = () => { setRefrescando(true); cargarEjercicios(); };
+
+  const renderEjercicio = ({ item }) => {
+    const color = COLOR_TIPO[item.tipo] || '#9E9E9E';
+    const icono = ICONO_TIPO[item.tipo] || 'pencil';
+    const colorNivel = COLOR_NIVEL[item.nivel] || '#9E9E9E';
+
+    return (
+      <TouchableOpacity
+        style={styles.tarjeta}
+        onPress={() => navigation.navigate('EjercicioEscritura', { ejercicioId: item.id })}
+      >
+        <View style={[styles.iconoContenedor, { backgroundColor: color + '20' }]}>
+          <MaterialCommunityIcons name={icono} size={28} color={color} />
         </View>
-      </View>
-      {item.completado
-        ? <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
-        : <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
-      }
-    </TouchableOpacity>
-  );
+        <View style={styles.info}>
+          <Text style={styles.titulo}>{item.titulo}</Text>
+          {item.descripcion ? (
+            <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text>
+          ) : null}
+          <View style={styles.pie}>
+            <View style={[styles.etiquetaTipo, { backgroundColor: color + '15' }]}>
+              <Text style={[styles.textoTipo, { color }]}>
+                {item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}
+              </Text>
+            </View>
+            <View style={[styles.etiquetaNivel, { backgroundColor: colorNivel + '15' }]}>
+              <Text style={[styles.textoNivel, { color: colorNivel }]}>
+                {item.nivel.charAt(0).toUpperCase() + item.nivel.slice(1)}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={24} color="#BDBDBD" />
+      </TouchableOpacity>
+    );
+  };
+
+  const tipos = ['todos', 'dictado', 'completar', 'libre', 'copia'];
+  const etiquetasTipos = { todos: 'Todos', dictado: 'Dictado', completar: 'Completar', libre: 'Libre', copia: 'Copia' };
 
   return (
     <View style={styles.contenedor}>
@@ -64,31 +92,51 @@ const EscrituraScreen = ({ navigation }) => {
         </View>
         <Text style={styles.subtitulo}>Practica y mejora tu escritura</Text>
       </View>
+
       <View style={styles.filtros}>
         {tipos.map(tipo => (
           <TouchableOpacity
             key={tipo}
-            style={[styles.botonFiltro, filtro === tipo && styles.botonFiltroActivo]}
-            onPress={() => setFiltro(tipo)}
+            style={[styles.botonFiltro, filtroTipo === tipo && styles.botonFiltroActivo]}
+            onPress={() => setFiltroTipo(tipo)}
           >
-            <Text style={[styles.textoFiltro, filtro === tipo && styles.textoFiltroActivo]}>
+            <Text style={[styles.textoFiltro, filtroTipo === tipo && styles.textoFiltroActivo]}>
               {etiquetasTipos[tipo]}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
-      <FlatList
-        data={ejerciciosFiltrados}
-        renderItem={renderEjercicio}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.lista}
-      />
+
+      {cargando ? (
+        <View style={styles.centrado}>
+          <ActivityIndicator size="large" color="#E91E63" />
+          <Text style={styles.textoCargando}>Cargando ejercicios...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={ejercicios}
+          renderItem={renderEjercicio}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={styles.lista}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefrescar} />}
+          ListEmptyComponent={
+            <View style={styles.sinResultados}>
+              <MaterialCommunityIcons name="pencil-off" size={40} color="#BDBDBD" />
+              <Text style={styles.textoSinResultados}>
+                No hay ejercicios disponibles aún
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
+  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
+  textoCargando: { color: '#9E9E9E', marginTop: 12 },
   encabezado: { backgroundColor: '#FFFFFF', padding: 20, paddingTop: 50 },
   tituloRow: { flexDirection: 'row', alignItems: 'center' },
   tituloModulo: { fontSize: 24, fontWeight: 'bold', color: '#1A237E' },
@@ -97,6 +145,7 @@ const styles = StyleSheet.create({
   botonFiltro: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0',
+    marginRight: 8, marginBottom: 4,
   },
   botonFiltroActivo: { backgroundColor: '#E91E63', borderColor: '#E91E63' },
   textoFiltro: { fontSize: 12, color: '#757575' },
@@ -104,18 +153,19 @@ const styles = StyleSheet.create({
   lista: { padding: 16, paddingBottom: 20, paddingTop: 8 },
   tarjeta: {
     backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14,
-    flexDirection: 'row', alignItems: 'center', elevation: 2,
-    marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', elevation: 2, marginBottom: 12,
   },
   iconoContenedor: { width: 56, height: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   info: { flex: 1 },
   titulo: { fontSize: 15, fontWeight: '600', color: '#212121', marginBottom: 2 },
-  descripcion: { fontSize: 12, color: '#9E9E9E', marginBottom: 6 },
-  pie: { flexDirection: 'row', alignItems: 'center' },
-  etiquetaDificultad: { backgroundColor: '#F5F5F5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  textoDificultad: { fontSize: 11, color: '#757575' },
-  puntajeContenedor: { flexDirection: 'row', alignItems: 'center' },
-  textoPuntaje: { fontSize: 12, color: '#FFC107', fontWeight: '600' },
+  descripcion: { fontSize: 12, color: '#9E9E9E', marginBottom: 6, lineHeight: 18 },
+  pie: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  etiquetaTipo: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  textoTipo: { fontSize: 11, fontWeight: '600' },
+  etiquetaNivel: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  textoNivel: { fontSize: 11, fontWeight: '600' },
+  sinResultados: { alignItems: 'center', padding: 40 },
+  textoSinResultados: { color: '#9E9E9E', fontSize: 14, marginTop: 12, textAlign: 'center' },
 });
 
 export default EscrituraScreen;
