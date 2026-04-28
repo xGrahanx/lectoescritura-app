@@ -261,6 +261,7 @@ router.post('/:id/estudiantes', async (req, res) => {
 });
 
 // ─── DELETE /api/grupos/:id/estudiantes/:estudianteId ─────────────────────────
+// Borrado lógico: marca la relación como inactiva en lugar de eliminarla
 router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
   const grupoId      = parseInt(req.params.id);
   const estudianteId = parseInt(req.params.estudianteId);
@@ -277,8 +278,10 @@ router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
       return res.status(404).json({ mensaje: 'El estudiante no pertenece a este grupo' });
     }
 
-    await prisma.GrupoEstudiante.delete({
+    // Soft delete: desactivar en vez de eliminar físicamente
+    await prisma.GrupoEstudiante.update({
       where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
+      data: { activo: false },
     });
 
     res.json({ mensaje: 'Estudiante removido del grupo correctamente' });

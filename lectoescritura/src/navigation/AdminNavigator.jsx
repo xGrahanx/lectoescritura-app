@@ -19,6 +19,7 @@ import EditarGrupoScreen      from '../screens/admin/EditarGrupoScreen';
 import DetalleGrupoScreen     from '../screens/admin/DetalleGrupoScreen';
 import ReportesScreen         from '../screens/admin/ReportesScreen';
 import ConfiguracionScreen    from '../screens/admin/ConfiguracionScreen';
+import AuditoriaScreen        from '../screens/admin/AuditoriaScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -56,6 +57,7 @@ const AdminNavigator = () => {
             Usuarios:      'account-multiple',
             Grupos:        'account-group',
             Reportes:      'file-chart',
+            Auditoria:     'shield-check',
             Configuracion: 'cog',
           };
           return (
@@ -72,6 +74,7 @@ const AdminNavigator = () => {
       <Tab.Screen name="Usuarios"      component={UsuariosStack}        options={{ tabBarLabel: 'Usuarios' }} />
       <Tab.Screen name="Grupos"        component={GruposStack}          options={{ tabBarLabel: 'Grupos' }} />
       <Tab.Screen name="Reportes"      component={ReportesScreen}       options={{ tabBarLabel: 'Reportes' }} />
+      <Tab.Screen name="Auditoria"     component={AuditoriaScreen}      options={{ tabBarLabel: 'Auditoría' }} />
       <Tab.Screen name="Configuracion" component={ConfiguracionScreen}  options={{ tabBarLabel: 'Config' }} />
     </Tab.Navigator>
   );

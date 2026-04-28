@@ -1,5 +1,6 @@
 /**
  * seed.js - Datos iniciales para la base de datos
+ * Contenido adaptado para niños de 1er a 3er grado (6-9 años)
  * Ejecutar con: node src/seed.js
  */
 
@@ -10,87 +11,113 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Insertando datos de prueba...');
 
-  // Textos de lectura
+  // Textos de lectura apropiados para 1er-3er grado
   await prisma.textos.createMany({
     skipDuplicates: true,
     data: [
       {
-        titulo: 'El Principito - Capítulo 1',
-        autor: 'Antoine de Saint-Exupéry',
-        contenido: `Cuando yo tenía seis años vi en un libro sobre la selva virgen que se titulaba "Historias vividas", una magnífica lámina. Representaba una serpiente boa que se tragaba a una fiera.\n\nEn el libro se afirmaba: "Las serpientes boas se tragan su presa entera, sin masticarla. Luego ya no pueden moverse y duermen durante los seis meses que dura su digestión."\n\nReflexioné mucho en ese entonces sobre las aventuras de la jungla y a mi vez logré trazar con un lápiz de colores mi primer dibujo.\n\nMostré mi obra de arte a las personas mayores y les pregunté si mi dibujo les daba miedo.\n\nMe respondieron: "¿Por qué habría de asustar un sombrero?"\n\nMi dibujo no representaba un sombrero. Representaba una serpiente boa que digerí­a un elefante. Dibujé entonces el interior de la serpiente boa, a fin de que las personas mayores pudieran comprender. Siempre tienen necesidad de explicaciones.`,
+        titulo: 'El perrito perdido',
+        autor: 'Cuento popular',
+        contenido: `Un día, un perrito pequeño se perdió en el parque.\nEl perrito se llamaba Toby y tenía el pelo café.\nToby estaba muy asustado y comenzó a llorar.\nUna niña llamada Sofía lo escuchó y fue a ayudarlo.\nSofía le dio agua y lo llevó a su casa.\nAl día siguiente, el dueño de Toby llegó muy feliz a buscarlo.\nToby movió la cola y saltó de alegría.`,
         nivel: 'basico',
       },
       {
-        titulo: 'La Tortuga y la Liebre',
-        autor: 'Esopo',
-        contenido: `Una liebre se burlaba de las cortas patas y el lento caminar de la tortuga. Esta, riéndose, le dijo: "Aunque eres tan veloz como el viento, yo te ganaré en una carrera."\n\nLa liebre, creyendo que tal cosa era imposible, aceptó la propuesta. Convinieron que el zorro señalaría el recorrido y la meta.\n\nLlegado el día, partieron juntas. La tortuga no dejó de caminar en ningún momento, a paso lento pero continuo. La liebre, confiada en su velocidad, se tumbó a descansar y se quedó dormida.\n\nCuando despertó, corrió tan rápido como pudo, pero llegó a la meta y encontró a la tortuga descansando tranquilamente, pues había llegado primero.\n\nMoraleja: La constancia y el esfuerzo continuo vencen a la velocidad sin disciplina.`,
+        titulo: 'Las frutas del jardín',
+        autor: 'Cuento educativo',
+        contenido: `En el jardín de la abuela había muchos árboles frutales.\nHabía manzanas rojas, naranjas dulces y mangos amarillos.\nCada mañana, los niños iban a recoger frutas frescas.\nLas frutas son muy buenas para la salud.\nNos dan vitaminas y nos ayudan a crecer fuertes.\nLa abuela hacía jugos deliciosos con todas las frutas del jardín.`,
         nivel: 'basico',
       },
       {
-        titulo: 'El Quijote - Fragmento',
-        autor: 'Miguel de Cervantes',
-        contenido: `En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.\n\nUna olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lentejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.\n\nEl resto della concluían sayo de velarte, calzas de velludo para las fiestas con sus pantuflos de lo mismo, y los días de entresemana se honraba con su vellorí de lo más fino.\n\nTenía en su casa una ama que pasaba de los cuarenta, y una sobrina que no llegaba a los veinte, y un mozo de campo y plaza que así ensillaba el rocín como tomaba la podadera.`,
+        titulo: 'El sol y la lluvia',
+        autor: 'Texto educativo',
+        contenido: `El sol sale todas las mañanas y nos da luz y calor.\nCon el sol, las plantas crecen y las flores se abren.\nA veces vienen las nubes y tapa el sol.\nEntonces cae la lluvia sobre la tierra.\nLa lluvia riega las plantas y llena los ríos.\nDespués de la lluvia, a veces aparece el arcoíris.\nEl arcoíris tiene muchos colores bonitos en el cielo.`,
+        nivel: 'basico',
+      },
+      {
+        titulo: 'Mi familia',
+        autor: 'Texto escolar',
+        contenido: `Mi familia es muy especial para mí.\nEn mi casa vivimos papá, mamá, mi hermana y yo.\nPapá trabaja y mamá nos cuida en casa.\nMi hermana se llama Valentina y tiene cinco años.\nLos domingos toda la familia se reúne a comer junta.\nNos reímos, jugamos y nos contamos cosas del día.\nYo quiero mucho a mi familia.`,
+        nivel: 'basico',
+      },
+      {
+        titulo: 'Los animales de la granja',
+        autor: 'Cuento educativo',
+        contenido: `En la granja del señor Pedro viven muchos animales.\nHay vacas que nos dan leche fresca cada mañana.\nLas gallinas ponen huevos amarillos y redondos.\nLos cerdos se revuelcan en el barro y gruñen fuerte.\nEl caballo marrón corre muy rápido por el campo.\nEl perro guardián cuida a todos los animales de noche.\nLos animales de la granja son muy importantes para nosotros.`,
         nivel: 'intermedio',
       },
       {
-        titulo: 'El Aleph - Fragmento',
-        autor: 'Jorge Luis Borges',
-        contenido: `La candente mañana de febrero en que Beatriz Viterbo murió, después de una imperiosa agonía que no se rebajó un solo momento ni al sentimentalismo ni al miedo, noté que las carteleras de fierro de la Plaza Constitución habían renovado no sé qué aviso de cigarrillos rubios; el hecho me dolió, pues comprendí que el incesante y vasto universo ya se apartaba de ella y que ese cambio era el primero de una serie infinita.\n\nCambiaría el universo pero yo no, pensé con melancólica vanidad; alguna vez, lo sé, mi vana devoción la había exasperado; muerta, yo podía consagrarme a su memoria, sin esperanza, pero también sin humillación.\n\nCarlos Argentino Daneri era primo hermano de Beatriz. La ruina de su cara me recordó la de ella, lo cual no podía no advertirme que yo estaba mirando la cara de un muerto.`,
-        nivel: 'avanzado',
+        titulo: 'El agua y nosotros',
+        autor: 'Texto científico escolar',
+        contenido: `El agua es muy importante para todos los seres vivos.\nLas personas necesitamos tomar agua todos los días para vivir.\nEl agua está en los ríos, los lagos y el mar.\nCuando llueve, el agua cae del cielo y riega la tierra.\nDebemos cuidar el agua y no desperdiciarla.\nCerrar el grifo cuando nos lavamos los dientes ayuda mucho.\nSin agua, no podría existir la vida en nuestro planeta.`,
+        nivel: 'intermedio',
       },
     ],
   });
 
-  // Ejercicios de escritura
+  // Ejercicios de escritura apropiados para 1er-3er grado
   await prisma.ejercicios_escritura.createMany({
     skipDuplicates: true,
     data: [
       {
-        titulo: 'Dictado: Animales del bosque',
+        titulo: 'Dictado: Animales del campo',
         tipo: 'dictado',
-        descripcion: 'Escucha y escribe 10 palabras relacionadas con animales del bosque.',
-        contenido: 'oso, lobo, ciervo, ardilla, búho, zorro, jabalí, águila, serpiente, murciélago',
+        descripcion: 'Escucha y escribe estas palabras sobre animales.',
+        contenido: 'vaca, perro, gato, pato, pollo, caballo, oveja, conejo, cerdo, gallina',
         nivel: 'basico',
       },
       {
-        titulo: 'Completa las oraciones',
+        titulo: 'Dictado: La naturaleza',
+        tipo: 'dictado',
+        descripcion: 'Escucha y escribe estas palabras sobre la naturaleza.',
+        contenido: 'árbol, flor, río, sol, luna, lluvia, nube, tierra, piedra, hoja',
+        nivel: 'basico',
+      },
+      {
+        titulo: 'Completa las oraciones: La familia',
         tipo: 'completar',
-        descripcion: 'Rellena los espacios en blanco con la palabra correcta.',
-        contenido: 'El ___ brilla de día. La ___ sale de noche. Los ___ viven en el mar.',
+        descripcion: 'Completa cada oración con la palabra correcta.',
+        contenido: 'Mi ___ se llama mamá. El ___ trabaja todos los días. Mi ___ juega conmigo. La ___ nos cuida con amor.',
         nivel: 'basico',
       },
       {
-        titulo: 'Escritura libre: Mi mascota',
+        titulo: 'Completa las oraciones: Los animales',
+        tipo: 'completar',
+        descripcion: 'Escribe el nombre del animal que corresponde.',
+        contenido: 'El ___ dice miau. El ___ dice guau. La ___ pone huevos. La ___ nos da leche.',
+        nivel: 'basico',
+      },
+      {
+        titulo: 'Escritura libre: Mi animal favorito',
         tipo: 'libre',
-        descripcion: 'Escribe un párrafo de al menos 5 oraciones sobre tu mascota favorita o la que te gustaría tener.',
+        descripcion: 'Escribe 3 oraciones sobre tu animal favorito. ¿Cómo se llama? ¿De qué color es? ¿Qué come?',
+        nivel: 'basico',
+      },
+      {
+        titulo: 'Escritura libre: Mi día en la escuela',
+        tipo: 'libre',
+        descripcion: 'Escribe 4 oraciones sobre lo que haces en la escuela. ¿Qué aprendes? ¿Con quién juegas?',
         nivel: 'intermedio',
       },
       {
-        titulo: 'Copia el texto',
+        titulo: 'Copia el texto: El gatito',
         tipo: 'copia',
-        descripcion: 'Copia el fragmento con buena ortografía y puntuación.',
-        contenido: 'El sol brillaba intensamente sobre el jardín. Las flores de colores se mecían suavemente con la brisa de la mañana. Un pequeño pájaro cantaba desde la rama más alta del árbol.',
+        descripcion: 'Copia este texto con cuidado, respetando las mayúsculas y los puntos.',
+        contenido: 'El gatito se llama Michi. Michi tiene el pelo blanco y suave. Le gusta dormir en el sofá. Todos los días toma leche fría.',
         nivel: 'basico',
       },
       {
-        titulo: 'Redacción: Mi día favorito',
-        tipo: 'libre',
-        descripcion: 'Escribe una redacción de al menos 10 oraciones sobre tu día favorito de la semana y por qué.',
+        titulo: 'Copia el texto: Las estaciones',
+        tipo: 'copia',
+        descripcion: 'Copia este texto con buena letra.',
+        contenido: 'En verano hace mucho calor. En invierno hace frío y a veces nieva. En primavera florecen las plantas. En otoño caen las hojas de los árboles.',
         nivel: 'intermedio',
-      },
-      {
-        titulo: 'Dictado avanzado: Naturaleza',
-        tipo: 'dictado',
-        descripcion: 'Dictado con palabras que incluyen tildes y letras de uso difícil.',
-        contenido: 'atmósfera, clorofila, fotosíntesis, ecosistema, biodiversidad, hibernación, migración, depredador, herbívoro, omnívoro',
-        nivel: 'avanzado',
       },
     ],
   });
 
   console.log('✅ Datos insertados correctamente.');
-  console.log('   - 4 textos de lectura');
-  console.log('   - 6 ejercicios de escritura');
+  console.log('   - 6 textos de lectura (apropiados para 1er-3er grado)');
+  console.log('   - 8 ejercicios de escritura (apropiados para 1er-3er grado)');
 }
 
 main()

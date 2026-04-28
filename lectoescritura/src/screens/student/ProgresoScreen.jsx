@@ -18,22 +18,25 @@ const ProgresoScreen = () => {
   const [progresoDiario, setProgresoDiario] = useState([]);
   const [resultadosLectura, setResultadosLectura]   = useState([]);
   const [resultadosEscritura, setResultadosEscritura] = useState([]);
+  const [resultadosIA, setResultadosIA]   = useState([]);
   const [cargando, setCargando]           = useState(true);
   const [refrescando, setRefrescando]     = useState(false);
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState('semana');
 
   const cargarDatos = useCallback(async () => {
     try {
-      const [resumenRes, diarioRes, lecturaRes, escrituraRes] = await Promise.all([
+      const [resumenRes, diarioRes, lecturaRes, escrituraRes, iaRes] = await Promise.all([
         axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/resumen`, { timeout: API_CONFIG.TIMEOUT }),
         axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}`, { timeout: API_CONFIG.TIMEOUT }),
         axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/lectura`, { timeout: API_CONFIG.TIMEOUT }),
         axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/escritura`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/progreso/${usuario.id}/ia`, { timeout: API_CONFIG.TIMEOUT }),
       ]);
       setResumen(resumenRes.data);
       setProgresoDiario(diarioRes.data);
       setResultadosLectura(lecturaRes.data);
       setResultadosEscritura(escrituraRes.data);
+      setResultadosIA(iaRes.data);
     } catch (error) {
       console.error('Error al cargar progreso:', error);
     } finally {
@@ -77,7 +80,13 @@ const ProgresoScreen = () => {
       puntaje: r.puntaje,
       fecha: r.creado_en,
     }));
-    return [...lectura, ...escritura]
+    const ia = resultadosIA.slice(0, 3).map(r => ({
+      id: `ia-${r.id}`, tipo: 'ia',
+      titulo: `Ejercicio IA: ${r.tipo || 'general'}`,
+      puntaje: r.puntaje,
+      fecha: r.creado_en,
+    }));
+    return [...lectura, ...escritura, ...ia]
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
       .slice(0, 5);
   };
@@ -97,9 +106,13 @@ const ProgresoScreen = () => {
     const promsEscritura = resultadosEscritura.length
       ? Math.round(resultadosEscritura.reduce((s, r) => s + (r.puntaje || 0), 0) / resultadosEscritura.length)
       : 0;
+    const promsIA = resultadosIA.length
+      ? Math.round(resultadosIA.reduce((s, r) => s + (r.puntaje || 0), 0) / resultadosIA.length)
+      : 0;
     return [
       { nombre: 'Lectura',  progreso: promsLectura,  color: '#4A90D9', icono: 'book-open-variant' },
       { nombre: 'Escritura', progreso: promsEscritura, color: '#E91E63', icono: 'pencil' },
+      { nombre: 'Ejercicios IA', progreso: promsIA,   color: '#9C27B0', icono: 'robot' },
     ];
   };
 
@@ -213,9 +226,9 @@ const ProgresoScreen = () => {
         actividades.map(actividad => (
           <View key={actividad.id} style={styles.tarjetaActividad}>
             <MaterialCommunityIcons
-              name={actividad.tipo === 'lectura' ? 'book-open-variant' : 'pencil'}
+              name={actividad.tipo === 'lectura' ? 'book-open-variant' : actividad.tipo === 'escritura' ? 'pencil' : 'robot'}
               size={22}
-              color={actividad.tipo === 'lectura' ? '#4A90D9' : '#E91E63'}
+              color={actividad.tipo === 'lectura' ? '#4A90D9' : actividad.tipo === 'escritura' ? '#E91E63' : '#9C27B0'}
             />
             <View style={styles.infoActividad}>
               <Text style={styles.tituloActividad}>{actividad.titulo}</Text>

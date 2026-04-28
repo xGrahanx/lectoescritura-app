@@ -40,20 +40,27 @@ const EstudiantesScreen = ({ navigation }) => {
 
       // Extraer todos los estudiantes de todos los grupos del docente
       const estudiantesExtraidos = [];
-      data.forEach(grupo => {
-        grupo.estudiantes.forEach(ge => {
-          // Promedio fijo basado en el ID hasta que se implemente el cálculo real
-          const promedioFijo = 50 + (ge.estudiante.id % 40);
+      for (const grupo of data) {
+        for (const ge of grupo.estudiantes) {
+          let promedio = 0;
+          try {
+            const { data: promedioData } = await axios.get(
+              `${API_CONFIG.BASE_URL}/usuarios/${ge.estudiante.id}/promedio`,
+              { timeout: 5000 }
+            );
+            promedio = promedioData.promedio;
+          } catch { promedio = 0; }
+
           estudiantesExtraidos.push({
             ...ge.estudiante,
             nombre: `${ge.estudiante.nombre} ${ge.estudiante.apellido}`,
             grupo: grupo.nombre,
-            promedio: promedioFijo,
+            promedio,
             activo: true,
             ultimaActividad: 'Sin actividad',
           });
-        });
-      });
+        }
+      }
 
       setEstudiantes(estudiantesExtraidos);
     } catch (error) {

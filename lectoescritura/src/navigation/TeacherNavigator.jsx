@@ -16,6 +16,7 @@ import DetalleEstudianteScreen from '../screens/teacher/DetalleEstudianteScreen'
 import AlertasScreen from '../screens/teacher/AlertasScreen';
 import AsignarTareaScreen from '../screens/teacher/AsignarTareaScreen';
 import PerfilDocenteScreen from '../screens/teacher/PerfilDocenteScreen';
+import AsistenteIAScreen from '../screens/teacher/AsistenteIAScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -41,6 +42,7 @@ const TeacherNavigator = () => {
           const iconos = {
             Dashboard: 'view-dashboard',
             Estudiantes: 'account-group',
+            AsistenteIA: 'robot',
             Alertas: 'bell',
             Perfil: 'account-circle',
           };
@@ -56,7 +58,8 @@ const TeacherNavigator = () => {
     >
       <Tab.Screen name="Dashboard" component={DashboardDocenteScreen} options={{ tabBarLabel: 'Dashboard' }} />
       <Tab.Screen name="Estudiantes" component={EstudiantesStack} options={{ tabBarLabel: 'Estudiantes' }} />
-      <Tab.Screen name="Alertas" component={AlertasScreen} options={{ tabBarLabel: 'Alertas', tabBarBadge: '3' }} />
+      <Tab.Screen name="AsistenteIA" component={AsistenteIAScreen} options={{ tabBarLabel: 'IA' }} />
+      <Tab.Screen name="Alertas" component={AlertasScreen} options={{ tabBarLabel: 'Alertas' }} />
       <Tab.Screen name="Perfil" component={PerfilDocenteScreen} options={{ tabBarLabel: 'Perfil' }} />
     </Tab.Navigator>
   );

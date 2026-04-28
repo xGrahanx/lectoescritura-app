@@ -5,45 +5,134 @@
  * exportar datos y visualizar tendencias de aprendizaje.
  */
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const DATOS_REPORTE = {
-  promedioMensual: [
-    { mes: 'Ene', promedio: 65 }, { mes: 'Feb', promedio: 68 },
-    { mes: 'Mar', promedio: 72 }, { mes: 'Abr', promedio: 71 },
-  ],
-  distribucionRendimiento: [
-    { rango: 'Alto (80-100%)', cantidad: 42, color: '#4CAF50' },
-    { rango: 'Medio (60-79%)', cantidad: 68, color: '#FF9800' },
-    { rango: 'Bajo (0-59%)', cantidad: 35, color: '#F44336' },
-  ],
-  modulosMasUsados: [
-    { modulo: 'Lectura', usos: 1240, porcentaje: 45 },
-    { modulo: 'Escritura', usos: 890, porcentaje: 32 },
-    { modulo: 'Ejercicios IA', usos: 630, porcentaje: 23 },
-  ],
-};
+import axios from 'axios';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { API_CONFIG } from '../../utils/constantes';
 
 const ReportesScreen = () => {
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState('mes');
+  const [cargando, setCargando] = useState(true);
+  const [refrescando, setRefrescando] = useState(false);
+  const [promedioMensual, setPromedioMensual] = useState([]);
+  const [distribucionRendimiento, setDistribucionRendimiento] = useState([]);
+  const [modulosMasUsados, setModulosMasUsados] = useState([]);
+  const [alertas, setAlertas] = useState([]);
+  const [totalEstudiantes, setTotalEstudiantes] = useState(0);
+  const [descargandoPDF, setDescargandoPDF] = useState(false);
+
   const ALTURA_MAX = 80;
 
-  const exportarReporte = () => {
-    Alert.alert('Exportar reporte', 'El reporte sera enviado a tu correo electronico en formato PDF.');
+  const cargarDatos = useCallback(async () => {
+    try {
+      const [progresoRes, rendimientoRes, modulosRes, alertasRes] = await Promise.all([
+        axios.get(`${API_CONFIG.BASE_URL}/reportes/progreso-mensual`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/reportes/rendimiento`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/reportes/modulos`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/reportes/alertas`, { timeout: API_CONFIG.TIMEOUT }),
+      ]);
+
+      setPromedioMensual(progresoRes.data.promedioMensual || []);
+      setDistribucionRendimiento(rendimientoRes.data.distribucion || []);
+      setTotalEstudiantes(rendimientoRes.data.totalEstudiantes || 0);
+      setModulosMasUsados(modulosRes.data.modulos || []);
+      setAlertas(alertasRes.data.alertas || []);
+    } catch (error) {
+      console.error('Error al cargar reportes:', error);
+      Alert.alert('Error', 'No se pudieron cargar los reportes');
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  const onRefrescar = () => {
+    setRefrescando(true);
+    cargarDatos();
   };
 
+  const exportarReporte = async () => {
+    try {
+      setDescargandoPDF(true);
+
+      // Generar nombre de archivo con fecha
+      const fecha = new Date().toISOString().split('T')[0];
+      const nombreArchivo = `reporte-${fecha}.pdf`;
+      const fileUri = FileSystem.documentDirectory + nombreArchivo;
+
+      // Descargar el PDF desde el backend
+      const downloadResumable = FileSystem.createDownloadResumable(
+        `${API_CONFIG.BASE_URL}/reportes/pdf`,
+        fileUri,
+        {},
+        (downloadProgress) => {
+          const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+          console.log(`📥 Descargando PDF: ${Math.round(progress * 100)}%`);
+        }
+      );
+
+      const { uri } = await downloadResumable.downloadAsync();
+      console.log('✅ PDF descargado en:', uri);
+
+      // Verificar si el dispositivo puede compartir archivos
+      const canShare = await Sharing.isAvailableAsync();
+      
+      if (canShare) {
+        // Compartir el PDF
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Guardar o compartir reporte',
+          UTI: 'com.adobe.pdf',
+        });
+        Alert.alert('Éxito', 'Reporte PDF generado correctamente');
+      } else {
+        Alert.alert('Éxito', `Reporte guardado en: ${uri}`);
+      }
+    } catch (error) {
+      console.error('❌ Error al exportar PDF:', error);
+      Alert.alert('Error', 'No se pudo generar el reporte PDF. Intenta de nuevo.');
+    } finally {
+      setDescargandoPDF(false);
+    }
+  };
+
+  if (cargando) {
+    return (
+      <View style={styles.centrado}>
+        <ActivityIndicator size="large" color="#6A1B9A" />
+        <Text style={styles.textoCargando}>Cargando reportes...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.contenedor}>
+    <ScrollView
+      style={styles.contenedor}
+      refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefrescar} />}
+    >
       <View style={styles.encabezado}>
         <View style={styles.tituloRow}>
           <MaterialCommunityIcons name="file-chart" size={26} color="#1A237E" />
           <Text style={styles.titulo}> Reportes</Text>
         </View>
-        <TouchableOpacity style={styles.botonExportar} onPress={exportarReporte}>
-          <MaterialCommunityIcons name="download" size={18} color="#6A1B9A" />
-          <Text style={styles.textoExportar}> Exportar</Text>
+        <TouchableOpacity 
+          style={[styles.botonExportar, descargandoPDF && styles.botonExportarDeshabilitado]} 
+          onPress={exportarReporte}
+          disabled={descargandoPDF}
+        >
+          {descargandoPDF ? (
+            <ActivityIndicator size="small" color="#6A1B9A" />
+          ) : (
+            <MaterialCommunityIcons name="download" size={18} color="#6A1B9A" />
+          )}
+          <Text style={styles.textoExportar}> {descargandoPDF ? 'Generando...' : 'Exportar'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -63,29 +152,33 @@ const ReportesScreen = () => {
 
       <View style={styles.tarjetaGrafica}>
         <Text style={styles.tituloTarjeta}>Promedio mensual del grupo</Text>
-        <View style={styles.grafica}>
-          {DATOS_REPORTE.promedioMensual.map(item => (
-            <View key={item.mes} style={styles.columnaGrafica}>
-              <Text style={styles.valorBarra}>{item.promedio}%</Text>
-              <View style={styles.contenedorBarra}>
-                <View style={[styles.barra, { height: (item.promedio / 100) * ALTURA_MAX, backgroundColor: item.promedio >= 70 ? '#4CAF50' : '#FF9800' }]} />
+        {promedioMensual.length === 0 ? (
+          <Text style={styles.sinDatos}>No hay datos disponibles</Text>
+        ) : (
+          <View style={styles.grafica}>
+            {promedioMensual.map(item => (
+              <View key={item.mes} style={styles.columnaGrafica}>
+                <Text style={styles.valorBarra}>{item.promedio}%</Text>
+                <View style={styles.contenedorBarra}>
+                  <View style={[styles.barra, { height: (item.promedio / 100) * ALTURA_MAX, backgroundColor: item.promedio >= 70 ? '#4CAF50' : '#FF9800' }]} />
+                </View>
+                <Text style={styles.etiquetaBarra}>{item.mes}</Text>
               </View>
-              <Text style={styles.etiquetaBarra}>{item.mes}</Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.tarjetaDistribucion}>
         <Text style={styles.tituloTarjeta}>Distribucion de rendimiento</Text>
-        <Text style={styles.subtituloTarjeta}>Total: 145 estudiantes</Text>
-        {DATOS_REPORTE.distribucionRendimiento.map(item => (
+        <Text style={styles.subtituloTarjeta}>Total: {totalEstudiantes} estudiantes</Text>
+        {distribucionRendimiento.map(item => (
           <View key={item.rango} style={styles.filaDistribucion}>
             <View style={[styles.puntito, { backgroundColor: item.color }]} />
             <Text style={styles.textoRango}>{item.rango}</Text>
             <View style={styles.barraDistribucion}>
-              <View style={[styles.rellenoDistribucion, { flex: Math.round((item.cantidad / 145) * 100), backgroundColor: item.color }]} />
-              <View style={{ flex: 100 - Math.round((item.cantidad / 145) * 100) }} />
+              <View style={[styles.rellenoDistribucion, { flex: totalEstudiantes > 0 ? Math.round((item.cantidad / totalEstudiantes) * 100) : 0, backgroundColor: item.color }]} />
+              <View style={{ flex: totalEstudiantes > 0 ? 100 - Math.round((item.cantidad / totalEstudiantes) * 100) : 100 }} />
             </View>
             <Text style={[styles.cantidadDistribucion, { color: item.color }]}>{item.cantidad}</Text>
           </View>
@@ -94,7 +187,7 @@ const ReportesScreen = () => {
 
       <View style={styles.tarjetaModulos}>
         <Text style={styles.tituloTarjeta}>Modulos mas utilizados</Text>
-        {DATOS_REPORTE.modulosMasUsados.map(item => (
+        {modulosMasUsados.map(item => (
           <View key={item.modulo} style={styles.filaModulo}>
             <Text style={styles.nombreModulo}>{item.modulo}</Text>
             <View style={styles.barraModulo}>
@@ -109,12 +202,7 @@ const ReportesScreen = () => {
       <View style={styles.tarjetaAlertas}>
         <Text style={styles.tituloTarjeta}>Resumen de alertas del mes</Text>
         <View style={styles.gridAlertas}>
-          {[
-            { tipo: 'Errores detectados', valor: 47, color: '#F44336', icono: 'alert-circle' },
-            { tipo: 'Logros registrados', valor: 89, color: '#4CAF50', icono: 'star-circle' },
-            { tipo: 'Inactividades', valor: 12, color: '#FF9800', icono: 'clock-alert' },
-            { tipo: 'Mejoras notables', valor: 34, color: '#2196F3', icono: 'trending-up' },
-          ].map((item, index) => (
+          {alertas.map((item, index) => (
             <View key={index} style={[styles.tarjetaAlerta, { borderTopColor: item.color }]}>
               <MaterialCommunityIcons name={item.icono} size={22} color={item.color} />
               <Text style={styles.valorAlerta}>{item.valor}</Text>
@@ -131,10 +219,13 @@ const ReportesScreen = () => {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
+  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F9FF' },
+  textoCargando: { color: '#9E9E9E', marginTop: 12 },
   encabezado: { backgroundColor: '#FFFFFF', padding: 20, paddingTop: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   tituloRow: { flexDirection: 'row', alignItems: 'center' },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#1A237E' },
   botonExportar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E5F5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  botonExportarDeshabilitado: { opacity: 0.6 },
   textoExportar: { fontSize: 13, color: '#6A1B9A', fontWeight: '600' },
   selectorPeriodo: { flexDirection: 'row', margin: 16, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 4, elevation: 1 },
   botonPeriodo: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
@@ -144,6 +235,7 @@ const styles = StyleSheet.create({
   tarjetaGrafica: { backgroundColor: '#FFFFFF', marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 16, elevation: 2 },
   tituloTarjeta: { fontSize: 15, fontWeight: 'bold', color: '#212121', marginBottom: 4 },
   subtituloTarjeta: { fontSize: 12, color: '#9E9E9E', marginBottom: 16 },
+  sinDatos: { fontSize: 13, color: '#9E9E9E', textAlign: 'center', paddingVertical: 20 },
   grafica: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 120 },
   columnaGrafica: { alignItems: 'center', flex: 1 },
   valorBarra: { fontSize: 11, color: '#757575', marginBottom: 4 },

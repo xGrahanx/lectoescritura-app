@@ -89,7 +89,22 @@ router.post('/:estudianteId', async (req, res) => {
   }
 });
 
-// ─── GET /api/progreso/:estudianteId/resumen ─────────────────────────────────
+// ─── GET /api/progreso/:estudianteId/ia ──────────────────────────────────────
+router.get('/:estudianteId/ia', async (req, res) => {
+  const estudianteId = parseInt(req.params.estudianteId);
+  if (isNaN(estudianteId)) return res.status(400).json({ mensaje: 'ID inválido' });
+
+  try {
+    const resultados = await prisma.ejercicios_ia.findMany({
+      where: { estudiante_id: estudianteId },
+      orderBy: { creado_en: 'desc' },
+    });
+    res.json(resultados);
+  } catch (error) {
+    console.error('Error al obtener ejercicios IA:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
+  }
+});
 router.get('/:estudianteId/resumen', async (req, res) => {
   const estudianteId = parseInt(req.params.estudianteId);
   if (isNaN(estudianteId)) return res.status(400).json({ mensaje: 'ID inválido' });
@@ -165,6 +180,7 @@ router.post('/:estudianteId/lectura', async (req, res) => {
     const texto = await prisma.textos.findUnique({ where: { id: parseInt(texto_id) } });
     if (!texto) return res.status(404).json({ mensaje: 'Texto no encontrado' });
 
+    // Guardar resultado de lectura
     const resultado = await prisma.resultados_lectura.create({
       data: {
         estudiante_id: estudianteId,
@@ -176,7 +192,42 @@ router.post('/:estudianteId/lectura', async (req, res) => {
       },
     });
 
-    res.status(201).json({ mensaje: 'Resultado de lectura guardado', resultado });
+    // Actualizar progreso diario del estudiante
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const progresoHoy = await prisma.progreso_diario.findFirst({
+      where: { estudiante_id: estudianteId, fecha: hoy },
+    });
+
+    if (progresoHoy) {
+      // Actualizar progreso existente
+      const nuevoTotal = progresoHoy.ejercicios_completados + 1;
+      const nuevoPuntaje = Math.round(
+        ((progresoHoy.puntaje_promedio * progresoHoy.ejercicios_completados) + puntaje) / nuevoTotal
+      );
+      
+      await prisma.progreso_diario.update({
+        where: { id: progresoHoy.id },
+        data: {
+          ejercicios_completados: nuevoTotal,
+          puntaje_promedio: nuevoPuntaje,
+        },
+      });
+    } else {
+      // Crear nuevo registro de progreso
+      await prisma.progreso_diario.create({
+        data: {
+          estudiante_id: estudianteId,
+          fecha: hoy,
+          puntaje_promedio: puntaje,
+          ejercicios_completados: 1,
+          racha_dias: 1,
+        },
+      });
+    }
+
+    res.status(201).json({ mensaje: 'Resultado de lectura guardado y progreso actualizado', resultado });
   } catch (error) {
     console.error('Error al guardar resultado de lectura:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -223,6 +274,7 @@ router.post('/:estudianteId/escritura', async (req, res) => {
     });
     if (!ejercicio) return res.status(404).json({ mensaje: 'Ejercicio no encontrado' });
 
+    // Guardar resultado de escritura
     const resultado = await prisma.resultados_escritura.create({
       data: {
         estudiante_id: estudianteId,
@@ -234,7 +286,42 @@ router.post('/:estudianteId/escritura', async (req, res) => {
       },
     });
 
-    res.status(201).json({ mensaje: 'Resultado de escritura guardado', resultado });
+    // Actualizar progreso diario del estudiante
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const progresoHoy = await prisma.progreso_diario.findFirst({
+      where: { estudiante_id: estudianteId, fecha: hoy },
+    });
+
+    if (progresoHoy) {
+      // Actualizar progreso existente
+      const nuevoTotal = progresoHoy.ejercicios_completados + 1;
+      const nuevoPuntaje = Math.round(
+        ((progresoHoy.puntaje_promedio * progresoHoy.ejercicios_completados) + puntaje) / nuevoTotal
+      );
+      
+      await prisma.progreso_diario.update({
+        where: { id: progresoHoy.id },
+        data: {
+          ejercicios_completados: nuevoTotal,
+          puntaje_promedio: nuevoPuntaje,
+        },
+      });
+    } else {
+      // Crear nuevo registro de progreso
+      await prisma.progreso_diario.create({
+        data: {
+          estudiante_id: estudianteId,
+          fecha: hoy,
+          puntaje_promedio: puntaje,
+          ejercicios_completados: 1,
+          racha_dias: 1,
+        },
+      });
+    }
+
+    res.status(201).json({ mensaje: 'Resultado de escritura guardado y progreso actualizado', resultado });
   } catch (error) {
     console.error('Error al guardar resultado de escritura:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });

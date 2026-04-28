@@ -36,6 +36,9 @@ router.get('/', async (req, res) => {
     filtro.tipo = tipo;
   }
 
+  // Filtrar solo ejercicios activos
+  filtro.activo = true;
+
   try {
     const ejercicios = await prisma.ejercicios_escritura.findMany({
       where: filtro,
@@ -148,6 +151,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // ─── DELETE /api/ejercicios/:id ───────────────────────────────────────────────
+// Borrado lógico: marca el ejercicio como inactivo en lugar de eliminarlo
 router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID inválido' });
@@ -156,7 +160,11 @@ router.delete('/:id', async (req, res) => {
     const ejercicio = await prisma.ejercicios_escritura.findUnique({ where: { id } });
     if (!ejercicio) return res.status(404).json({ mensaje: 'Ejercicio no encontrado' });
 
-    await prisma.ejercicios_escritura.delete({ where: { id } });
+    // Soft delete: desactivar en vez de eliminar físicamente
+    await prisma.ejercicios_escritura.update({
+      where: { id },
+      data: { activo: false },
+    });
 
     res.json({ mensaje: `Ejercicio "${ejercicio.titulo}" eliminado correctamente` });
   } catch (error) {

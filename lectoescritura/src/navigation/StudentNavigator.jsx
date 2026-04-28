@@ -42,6 +42,23 @@ const EscrituraStack = () => (
   </Stack.Navigator>
 );
 
+// Stack para Tareas — incluye las pantallas de ejercicio para navegación directa
+const TareasStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ListaTareas" component={TareasScreen} />
+    <Stack.Screen name="EjercicioEscrituraTarea" component={EjercicioEscrituraScreen} />
+    <Stack.Screen name="EjercicioLecturaTarea" component={EjercicioLecturaScreen} />
+    <Stack.Screen name="EjercicioIATarea" component={EjerciciosIAScreen} />
+  </Stack.Navigator>
+);
+
+// Stack para ejercicios IA
+const EjerciciosIAStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ListaIA" component={EjerciciosIAScreen} />
+  </Stack.Navigator>
+);
+
 const StudentNavigator = () => {
   return (
     <Tab.Navigator
@@ -72,8 +89,8 @@ const StudentNavigator = () => {
       <Tab.Screen name="Inicio" component={InicioEstudianteScreen} options={{ tabBarLabel: 'Inicio' }} />
       <Tab.Screen name="Lectura" component={LecturaStack} options={{ tabBarLabel: 'Lectura' }} />
       <Tab.Screen name="Escritura" component={EscrituraStack} options={{ tabBarLabel: 'Escritura' }} />
-      <Tab.Screen name="Tareas" component={TareasScreen} options={{ tabBarLabel: 'Tareas' }} />
-      <Tab.Screen name="EjerciciosIA" component={EjerciciosIAScreen} options={{ tabBarLabel: 'IA' }} />
+      <Tab.Screen name="Tareas" component={TareasStack} options={{ tabBarLabel: 'Tareas' }} />
+      <Tab.Screen name="EjerciciosIA" component={EjerciciosIAStack} options={{ tabBarLabel: 'IA' }} />
       <Tab.Screen name="Progreso" component={ProgresoScreen} options={{ tabBarLabel: 'Progreso' }} />
     </Tab.Navigator>
   );

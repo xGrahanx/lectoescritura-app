@@ -10,56 +10,131 @@
  * La IA detecta errores ortograficos y gramaticales y genera retroalimentacion.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_CONFIG } from '../../utils/constantes';
+import { useAuth } from '../../context/AuthContext';
 
 const EjercicioEscrituraScreen = ({ route, navigation }) => {
-  const { ejercicio, tarea, tareaId } = route.params || {};
+  const { ejercicio, ejercicioId, tarea, tareaId } = route.params || {};
+  const { usuario } = useAuth();
 
-  // Si viene de una tarea, construir el objeto ejercicio desde la tarea
-  const ejercicioActual = ejercicio || {
-    id: tareaId,
-    titulo: tarea?.titulo || 'Ejercicio de escritura',
-    tipo: tarea?.tipo === 'especial' ? 'libre' : (tarea?.tipo || 'libre'),
-    descripcion: tarea?.descripcion || '',
-    icono: 'pencil-box',
-    color: '#E91E63',
-  };
-  const [respuesta, setRespuesta] = useState('');
-  const [evaluando, setEvaluando] = useState(false);
-  const [resultado, setResultado] = useState(null);
+  const [ejercicioActual, setEjercicioActual] = useState(ejercicio || null);
+  const [cargando, setCargando]               = useState(!ejercicio);
+  const [respuesta, setRespuesta]             = useState('');
+  const [evaluando, setEvaluando]             = useState(false);
+  const [resultado, setResultado]             = useState(null);
+
+  useEffect(() => {
+    // Si ya viene el objeto completo, no hace falta cargar
+    if (ejercicio) return;
+
+    const cargar = async () => {
+      // Si viene ejercicioId, cargarlo desde el backend
+      if (ejercicioId) {
+        try {
+          const { data } = await axios.get(
+            `${API_CONFIG.BASE_URL}/ejercicios/${ejercicioId}`,
+            { timeout: API_CONFIG.TIMEOUT }
+          );
+          setEjercicioActual(data);
+        } catch {
+          Alert.alert('Error', 'No se pudo cargar el ejercicio.', [
+            { text: 'Volver', onPress: () => navigation.goBack() },
+          ]);
+        } finally {
+          setCargando(false);
+        }
+        return;
+      }
+
+      // Si viene de una tarea especial/ia sin ejercicioId, construir desde tarea
+      if (tarea) {
+        setEjercicioActual({
+          id: tareaId,
+          titulo: tarea.titulo || 'Ejercicio de escritura',
+          tipo: tarea.tipo === 'especial' ? 'libre' : (tarea.tipo || 'libre'),
+          descripcion: tarea.descripcion || '',
+          contenido: null,
+        });
+      }
+      setCargando(false);
+    };
+
+    cargar();
+  }, [ejercicioId, ejercicio, tarea, tareaId]);
 
   const evaluarEscritura = async () => {
     if (!respuesta.trim()) {
-      Alert.alert('Campo vacio', 'Por favor escribe tu respuesta antes de enviar.');
+      Alert.alert('Campo vacío', 'Por favor escribe tu respuesta antes de enviar.');
       return;
     }
     setEvaluando(true);
-    try {
-      // TODO: Llamar al servicio de IA para evaluar la escritura
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setResultado({
-        puntaje: 82,
-        erroresOrtograficos: ['gato ? correcto', 'perro ? correcto', 'arbol ? arbol (falta tilde)'],
-        erroresGramaticales: [],
-        retroalimentacion: 'Excelente escritura. Solo recuerda colocar tildes en palabras esdrujulas como "arbol".',
-        palabrasCorrectas: 18,
-        totalPalabras: 20,
-      });
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo evaluar la escritura. Intenta de nuevo.');
-    } finally {
-      setEvaluando(false);
+
+    // Marcar tarea como completada inmediatamente
+    if (tareaId) {
+      axios.put(
+        `${API_CONFIG.BASE_URL}/tareas/${tareaId}/estado`,
+        { estado: 'completada' },
+        { timeout: API_CONFIG.TIMEOUT }
+      ).catch(() => {});
     }
+
+    let evaluacion = null;
+
+    try {
+      const { data } = await axios.post(
+        `${API_CONFIG.BASE_URL}/ia/evaluar-escritura`,
+        { ejercicio: ejercicioActual, respuesta },
+        { timeout: 30000 }
+      );
+      evaluacion = data;
+    } catch {
+      setEvaluando(false);
+      Alert.alert(
+        'IA no disponible',
+        'No se pudo evaluar tu ejercicio en este momento. Verifica tu conexión e intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Guardar resultado real en la BD
+    if (ejercicioActual?.id && usuario?.id) {
+      axios.post(
+        `${API_CONFIG.BASE_URL}/progreso/${usuario.id}/escritura`,
+        {
+          ejercicio_id: ejercicioActual.id,
+          puntaje: evaluacion.puntaje,
+          respuesta,
+          errores_ortograficos: evaluacion.erroresOrtograficos || [],
+          retroalimentacion: evaluacion.retroalimentacion,
+        },
+        { timeout: API_CONFIG.TIMEOUT }
+      ).catch(() => {});
+    }
+
+    setResultado(evaluacion);
+    setEvaluando(false);
   };
 
-  // --- VISTA DE RESULTADO -------------------------------------------------------
-  if (resultado) {
+  // --- CARGANDO ----------------------------------------------------------------
+  if (cargando || !ejercicioActual) {
     return (
+      <View style={styles.centrado}>
+        <ActivityIndicator size="large" color="#E91E63" />
+        <Text style={styles.textoCargando}>Cargando ejercicio...</Text>
+      </View>
+    );
+  }
+
+  // --- VISTA DE RESULTADO -------------------------------------------------------
+  if (resultado) {    return (
       <View style={styles.contenedor}>
         <View style={styles.barraTop}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -130,12 +205,22 @@ const EjercicioEscrituraScreen = ({ route, navigation }) => {
             {ejercicioActual.tipo === 'copia' && 'Copia el siguiente texto con la mayor precisión posible, respetando mayúsculas y puntuación.'}
           </Text>
         </View>
-        {ejercicioActual.tipo === 'copia' && (
+        {ejercicioActual.tipo === 'copia' && ejercicioActual.contenido && (
           <View style={styles.textoACopiar}>
-            <Text style={styles.etiquetaCopiar}>Texto original:</Text>
-            <Text style={styles.contenidoCopiar}>
-              "El sol brillaba intensamente sobre el jardin. Las flores de colores se mecian suavemente con la brisa de la manana. Un pequeno pajaro cantaba desde la rama mas alta del arbol."
-            </Text>
+            <Text style={styles.etiquetaCopiar}>Texto a copiar:</Text>
+            <Text style={styles.contenidoCopiar}>{ejercicioActual.contenido}</Text>
+          </View>
+        )}
+        {ejercicioActual.tipo === 'completar' && ejercicioActual.contenido && (
+          <View style={styles.textoACopiar}>
+            <Text style={styles.etiquetaCopiar}>Oraciones a completar:</Text>
+            <Text style={styles.contenidoCopiar}>{ejercicioActual.contenido}</Text>
+          </View>
+        )}
+        {ejercicioActual.tipo === 'dictado' && ejercicioActual.contenido && (
+          <View style={styles.textoACopiar}>
+            <Text style={styles.etiquetaCopiar}>Palabras del dictado:</Text>
+            <Text style={styles.contenidoCopiar}>{ejercicioActual.contenido}</Text>
           </View>
         )}
         {ejercicioActual.tipo === 'dictado' && (
@@ -172,6 +257,8 @@ const EjercicioEscrituraScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
+  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F9FF' },
+  textoCargando: { color: '#9E9E9E', marginTop: 12, fontSize: 14 },
   barraTop: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#FFFFFF', padding: 16, paddingTop: 50, elevation: 2,

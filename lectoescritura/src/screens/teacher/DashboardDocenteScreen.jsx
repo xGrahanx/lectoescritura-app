@@ -50,15 +50,29 @@ const DashboardDocenteScreen = ({ navigation }) => {
 
   const onRefrescar = () => { setRefrescando(true); cargarDatos(); };
 
-  // Extraer todos los estudiantes de todos los grupos
-  const todosLosEstudiantes = grupos.flatMap(g =>
-    (g.estudiantes || []).map(ge => ({
-      ...ge.estudiante,
-      grupo: g.nombre,
-      // Promedio fijo basado en el ID hasta que se implemente el cálculo real
-      promedio: 50 + (ge.estudiante.id % 40),
-    }))
-  );
+  // Extraer todos los estudiantes de todos los grupos con promedio real
+  const [todosLosEstudiantes, setTodosLosEstudiantes] = useState([]);
+
+  useEffect(() => {
+    const calcularPromedios = async () => {
+      const lista = grupos.flatMap(g =>
+        (g.estudiantes || []).map(ge => ({ ...ge.estudiante, grupo: g.nombre }))
+      );
+      const conPromedios = await Promise.all(
+        lista.map(async (est) => {
+          try {
+            const { data } = await axios.get(
+              `${API_CONFIG.BASE_URL}/usuarios/${est.id}/promedio`,
+              { timeout: 5000 }
+            );
+            return { ...est, promedio: data.promedio };
+          } catch { return { ...est, promedio: 0 }; }
+        })
+      );
+      setTodosLosEstudiantes(conPromedios);
+    };
+    if (grupos.length > 0) calcularPromedios();
+  }, [grupos]);
 
   return (
     <ScrollView

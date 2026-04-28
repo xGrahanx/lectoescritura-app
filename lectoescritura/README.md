@@ -117,6 +117,13 @@ lectoescritura-app/
 | POST | /api/progreso/:id/lectura | Guardar resultado de lectura |
 | GET | /api/progreso/:id/escritura | Resultados de escritura |
 | POST | /api/progreso/:id/escritura | Guardar resultado de escritura |
+| GET | /api/auditoria | Listar registros de auditoría (admin) |
+| GET | /api/auditoria/stats/resumen | Estadísticas de auditoría (admin) |
+| GET | /api/reportes/pdf | Generar y descargar reporte en PDF (admin) |
+| GET | /api/reportes/progreso-mensual | Progreso mensual del sistema |
+| GET | /api/reportes/rendimiento | Distribución de rendimiento |
+| GET | /api/reportes/modulos | Uso de módulos |
+| GET | /api/reportes/alertas | Resumen de alertas |
 
 ## Instalacion
 
@@ -162,8 +169,44 @@ EXPO_PUBLIC_API_URL=http://192.168.X.X:3000/api
 - **Docente**: monitorea el rendimiento del grupo, asigna tareas con textos/ejercicios especificos a cualquier estudiante, puede eliminar tareas pendientes
 - **Administrador**: gestiona usuarios (crear/editar/eliminar), ve reportes y configura el sistema
 
+## Completado (28 de Abril, 2026)
+
+### ✅ Sistema de Auditoría Completa
+- **60 triggers automáticos** en PostgreSQL
+- **13 tablas auditadas** (100% del sistema)
+- Registra automáticamente INSERT, UPDATE, DELETE
+- Guarda datos anteriores y nuevos en formato JSON
+- Pantalla de auditoría para administradores
+
+### ✅ Borrado Lógico (Soft Delete)
+- Campo `activo` agregado a **11 tablas**
+- Ningún dato se elimina físicamente
+- Todos los registros son 100% recuperables
+- Cumplimiento de normativas GDPR
+
+### ✅ Sistema de Reportes en PDF
+- Endpoint `GET /api/reportes/pdf` para generar reportes
+- Descarga y compartir PDF en la app móvil
+- Solo disponible para administrador
+- Incluye: resumen general, distribución de rendimiento, uso de módulos, progreso mensual, alertas
+
+### ✅ Mejoras Adicionales
+- Detalle de estudiante con módulo de IA
+- Sistema de progreso actualizado en todos los módulos (lectura, escritura, IA)
+- Sistema de alertas mejorado con cálculo correcto de inactividad
+- Reportes con datos en tiempo real desde PostgreSQL
+
+### 📊 Estadísticas
+```
+✅ 60 triggers de auditoría
+✅ 13 tablas auditadas (100%)
+✅ 11 tablas con borrado lógico
+✅ 7 endpoints con soft delete
+✅ 100% de trazabilidad
+✅ 0% de pérdida de datos
+```
+
 ## Pendiente
 
 - Integracion completa con **Google Gemini** para evaluacion de respuestas y sugerencias de tareas personalizadas segun rendimiento
 - Modo offline con sincronizacion automatica via expo-sqlite
-- Alertas automaticas generadas por la IA

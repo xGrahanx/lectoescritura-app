@@ -27,6 +27,7 @@ model Usuario {
   resultados_lectura                      resultados_lectura[]
   tareas_tareas_docente_idTousuarios      tareas[]               @relation("tareas_docente_idTousuarios")
   tareas_tareas_estudiante_idTousuarios   tareas[]               @relation("tareas_estudiante_idTousuarios")
+  auditoria                               auditoria[]
 
   @@map("usuarios")
 }
@@ -47,6 +48,7 @@ model GrupoEstudiante {
   grupo_id      Int
   estudiante_id Int
   asignado_en   DateTime? @default(now()) @db.Timestamp(6)
+  activo        Boolean?  @default(true)
   usuarios      Usuario   @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   grupos        Grupo     @relation(fields: [grupo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -62,6 +64,7 @@ model alertas {
   titulo                                   String?     @db.VarChar(200)
   mensaje                                  String?
   leida                                    Boolean?    @default(false)
+  activo                                   Boolean?    @default(true)
   creado_en                                DateTime?   @default(now()) @db.Timestamp(6)
   usuarios_alertas_docente_idTousuarios    Usuario?    @relation("alertas_docente_idTousuarios", fields: [docente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuarios_alertas_estudiante_idTousuarios Usuario?    @relation("alertas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -84,6 +87,7 @@ model ejercicios_escritura {
   descripcion          String?
   contenido            String?
   nivel                tipo_nivel
+  activo               Boolean?               @default(true)
   creado_en            DateTime?              @default(now()) @db.Timestamp(6)
   resultados_escritura resultados_escritura[]
   tareas               tareas[]
@@ -97,6 +101,7 @@ model ejercicios_ia {
   preguntas     Json
   respuestas    Json?
   puntaje       Int?
+  activo        Boolean?  @default(true)
   creado_en     DateTime? @default(now()) @db.Timestamp(6)
   usuarios      Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -108,6 +113,7 @@ model progreso_diario {
   puntaje_promedio       Int?
   ejercicios_completados Int?      @default(0)
   racha_dias             Int?      @default(0)
+  activo                 Boolean?  @default(true)
   usuarios               Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -120,6 +126,7 @@ model resultados_escritura {
   respuesta            String?
   errores_ortograficos Json?
   retroalimentacion    String?
+  activo               Boolean?              @default(true)
   creado_en            DateTime?             @default(now()) @db.Timestamp(6)
   ejercicios_escritura ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuarios             Usuario?              @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -134,6 +141,7 @@ model resultados_lectura {
   respuestas        Json?
   retroalimentacion String?
   errores           Json?
+  activo            Boolean?  @default(true)
   creado_en         DateTime? @default(now()) @db.Timestamp(6)
   usuarios          Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   textos            textos?   @relation(fields: [texto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -151,6 +159,7 @@ model tareas {
   fecha_limite                            DateTime?          @db.Date
   estado                                  tipo_estado_tarea? @default(pendiente)
   es_avanzada                             Boolean?           @default(false)
+  activo                                  Boolean?           @default(true)
   creado_en                               DateTime?          @default(now()) @db.Timestamp(6)
   usuarios_tareas_docente_idTousuarios    Usuario?           @relation("tareas_docente_idTousuarios", fields: [docente_id], references: [id], onUpdate: NoAction)
   usuarios_tareas_estudiante_idTousuarios Usuario?           @relation("tareas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -168,6 +177,25 @@ model textos {
   creado_en          DateTime?            @default(now()) @db.Timestamp(6)
   resultados_lectura resultados_lectura[]
   tareas             tareas[]
+}
+
+model auditoria {
+  id               Int       @id @default(autoincrement())
+  tabla            String    @db.VarChar(100)
+  operacion        String    @db.VarChar(20)
+  usuario_id       Int?
+  registro_id      Int?
+  datos_anteriores Json?
+  datos_nuevos     Json?
+  ip_address       String?   @db.VarChar(50)
+  user_agent       String?
+  creado_en        DateTime? @default(now()) @db.Timestamp(6)
+  usuario          Usuario?  @relation(fields: [usuario_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([tabla])
+  @@index([usuario_id])
+  @@index([creado_en])
+  @@index([operacion])
 }
 
 enum Rol {

@@ -24,7 +24,7 @@ router.get('/estudiante/:estudianteId', async (req, res) => {
 
   try {
     const tareas = await prisma.tareas.findMany({
-      where: { estudiante_id: estudianteId },
+      where: { estudiante_id: estudianteId, activo: true },
       include: {
         usuarios_tareas_docente_idTousuarios: {
           select: { id: true, nombre: true, apellido: true },
@@ -63,7 +63,7 @@ router.get('/docente/:docenteId', async (req, res) => {
 
   try {
     const tareas = await prisma.tareas.findMany({
-      where: { docente_id: docenteId },
+      where: { docente_id: docenteId, activo: true },
       include: {
         usuarios_tareas_estudiante_idTousuarios: {
           select: { id: true, nombre: true, apellido: true, grado: true },
@@ -209,6 +209,7 @@ router.put('/:id/estado', async (req, res) => {
 });
 
 // ─── DELETE /api/tareas/:id ───────────────────────────────────────────────────
+// Borrado lógico: marca la tarea como inactiva en lugar de eliminarla
 router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID inválido' });
@@ -217,7 +218,11 @@ router.delete('/:id', async (req, res) => {
     const tarea = await prisma.tareas.findUnique({ where: { id } });
     if (!tarea) return res.status(404).json({ mensaje: 'Tarea no encontrada' });
 
-    await prisma.tareas.delete({ where: { id } });
+    // Soft delete: desactivar en vez de eliminar físicamente
+    await prisma.tareas.update({
+      where: { id },
+      data: { activo: false },
+    });
 
     res.json({ mensaje: `Tarea "${tarea.titulo}" eliminada correctamente` });
   } catch (error) {

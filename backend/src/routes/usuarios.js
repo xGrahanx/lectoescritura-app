@@ -13,6 +13,27 @@ const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// ─── GET /api/usuarios/:id/promedio ──────────────────────────────────────────
+router.get('/:id/promedio', async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ mensaje: 'ID inválido' });
+  try {
+    const [lectura, escritura, ia] = await Promise.all([
+      prisma.resultados_lectura.findMany({ where: { estudiante_id: id }, select: { puntaje: true } }),
+      prisma.resultados_escritura.findMany({ where: { estudiante_id: id }, select: { puntaje: true } }),
+      prisma.ejercicios_ia.findMany({ where: { estudiante_id: id }, select: { puntaje: true } }),
+    ]);
+    const todos = [...lectura, ...escritura, ...ia].filter(r => r.puntaje !== null);
+    const promedio = todos.length
+      ? Math.round(todos.reduce((s, r) => s + (r.puntaje || 0), 0) / todos.length)
+      : 0;
+    res.json({ promedio, totalEjercicios: todos.length });
+  } catch (error) {
+    console.error('Error al calcular promedio:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
+  }
+});
+
 // â”€â”€â”€ GET /api/usuarios/estudiantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Retorna solo los usuarios con rol estudiante y activos
 router.get('/estudiantes', async (req, res) => {

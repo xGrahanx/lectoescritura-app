@@ -57,24 +57,21 @@ const TareasScreen = ({ navigation }) => {
     }
     switch (tarea.tipo) {
       case 'lectura':
-        navigation.navigate('Lectura', {
-          screen: 'EjercicioLectura',
-          params: { textoId: tarea.texto_id, tareaId: tarea.id },
+        navigation.navigate('EjercicioLecturaTarea', {
+          textoId: tarea.texto_id, tareaId: tarea.id,
         });
         break;
       case 'escritura':
-        navigation.navigate('Escritura', {
-          screen: 'EjercicioEscritura',
-          params: { ejercicioId: tarea.ejercicio_id, tareaId: tarea.id, tarea },
+        navigation.navigate('EjercicioEscrituraTarea', {
+          ejercicioId: tarea.ejercicio_id, tareaId: tarea.id, tarea,
         });
         break;
       case 'ia':
-        navigation.navigate('EjerciciosIA', { tareaId: tarea.id });
+        navigation.navigate('EjercicioIATarea', { tareaId: tarea.id });
         break;
       case 'especial':
-        navigation.navigate('Escritura', {
-          screen: 'EjercicioEscritura',
-          params: { tareaId: tarea.id, tarea },
+        navigation.navigate('EjercicioEscrituraTarea', {
+          tareaId: tarea.id, tarea,
         });
         break;
       default:

@@ -28,6 +28,8 @@ const AsignarTareaScreen = ({ route, navigation }) => {
   const [esAvanzada, setEsAvanzada]         = useState(true);
   const [cargandoItems, setCargandoItems]   = useState(false);
   const [asignando, setAsignando]           = useState(false);
+  const [sugerencias, setSugerencias]       = useState(null);
+  const [cargandoIA, setCargandoIA]         = useState(false);
 
   // Cargar textos o ejercicios según el tipo elegido
   useEffect(() => {
@@ -60,6 +62,23 @@ const AsignarTareaScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'No se pudieron cargar los ejercicios.');
     } finally {
       setCargandoItems(false);
+    }
+  };
+
+  const pedirSugerenciasIA = async () => {
+    setCargandoIA(true);
+    setSugerencias(null);
+    try {
+      const { data } = await axios.post(
+        `${API_CONFIG.BASE_URL}/ia/sugerir-tarea`,
+        { estudianteId: estudiante.id },
+        { timeout: 30000 }
+      );
+      setSugerencias(data);
+    } catch {
+      Alert.alert('Error', 'No se pudieron obtener sugerencias. Verifica tu conexión.');
+    } finally {
+      setCargandoIA(false);
     }
   };
 
@@ -158,6 +177,49 @@ const AsignarTareaScreen = ({ route, navigation }) => {
             <Text style={styles.subEstudiante}>{estudiante.grupo || estudiante.grado || ''}</Text>
           </View>
         </View>
+
+        {/* Sugerencias IA */}
+        <TouchableOpacity
+          style={styles.botonIA}
+          onPress={pedirSugerenciasIA}
+          disabled={cargandoIA}
+        >
+          {cargandoIA ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <MaterialCommunityIcons name="robot" size={18} color="#FFFFFF" />
+          )}
+          <Text style={styles.textoBotonIA}>
+            {cargandoIA ? '  Consultando IA...' : '  Sugerencias con IA'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Mostrar sugerencias */}
+        {sugerencias && (
+          <View style={styles.tarjetaSugerencias}>
+            <View style={styles.encabezadoSugerencias}>
+              <MaterialCommunityIcons name="robot" size={18} color="#9C27B0" />
+              <Text style={styles.tituloSugerencias}> Análisis de la IA</Text>
+            </View>
+            <Text style={styles.resumenSugerencias}>{sugerencias.resumen}</Text>
+            {sugerencias.sugerencias?.map((s, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.itemSugerencia}
+                onPress={() => {
+                  setTipoTarea(s.tipo);
+                  setSugerencias(null);
+                }}
+              >
+                <View style={styles.infoSugerencia}>
+                  <Text style={styles.tituloItemSugerencia}>{s.titulo}</Text>
+                  <Text style={styles.razonSugerencia}>{s.razon}</Text>
+                </View>
+                <MaterialCommunityIcons name="arrow-right-circle" size={22} color="#9C27B0" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Selector de tipo */}
         <Text style={styles.etiqueta}>Tipo de tarea</Text>
@@ -358,6 +420,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E0E0E0',
     paddingHorizontal: 14, height: 48, fontSize: 15, color: '#212121', marginBottom: 20,
   },
+  botonIA: {
+    backgroundColor: '#9C27B0', borderRadius: 12, padding: 12,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+  },
+  textoBotonIA: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  tarjetaSugerencias: {
+    backgroundColor: '#F3E5F5', borderRadius: 12, padding: 14, marginBottom: 16,
+  },
+  encabezadoSugerencias: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  tituloSugerencias: { fontSize: 14, fontWeight: 'bold', color: '#6A1B9A' },
+  resumenSugerencias: { fontSize: 13, color: '#424242', lineHeight: 20, marginBottom: 12 },
+  itemSugerencia: {
+    backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 8,
+  },
+  infoSugerencia: { flex: 1 },
+  tituloItemSugerencia: { fontSize: 13, fontWeight: '600', color: '#212121' },
+  razonSugerencia: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
   botonAsignar: {
     backgroundColor: '#2E7D32', borderRadius: 12, padding: 16,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

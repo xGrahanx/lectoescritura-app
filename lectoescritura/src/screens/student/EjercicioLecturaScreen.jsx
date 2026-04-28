@@ -10,10 +10,12 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG } from '../../utils/constantes';
+import { useAuth } from '../../context/AuthContext';
 
 const PREGUNTAS_EJEMPLO = [
   { id: 1, tipo: 'opcion_multiple', pregunta: '¿Cuál es el tema principal del texto?', opciones: ['La amistad', 'La imaginación infantil', 'Los viajes espaciales', 'Los animales'], respuestaCorrecta: 1 },
@@ -23,12 +25,32 @@ const PREGUNTAS_EJEMPLO = [
 
 const EjercicioLecturaScreen = ({ route, navigation }) => {
   const { textoId, tareaId } = route.params || {};
+  const { usuario } = useAuth();
   const [texto, setTexto]     = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [preguntas, setPreguntas] = useState([]);
   const [fase, setFase]       = useState('lectura');
   const [respuestas, setRespuestas] = useState({});
   const [evaluando, setEvaluando]   = useState(false);
   const [resultado, setResultado]   = useState(null);
+
+  const generarPreguntas = async (textoData) => {
+    try {
+      const { data } = await axios.post(
+        `${API_CONFIG.BASE_URL}/ia/generar-preguntas`,
+        { texto: textoData },
+        { timeout: 30000 }
+      );
+      if (data.preguntas && data.preguntas.length > 0) {
+        setPreguntas(data.preguntas);
+      } else {
+        setPreguntas(PREGUNTAS_EJEMPLO);
+      }
+    } catch {
+      // Si falla la IA, usar preguntas de ejemplo
+      setPreguntas(PREGUNTAS_EJEMPLO);
+    }
+  };
 
   useEffect(() => {
     const cargarTexto = async () => {
@@ -42,6 +64,8 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
           { timeout: API_CONFIG.TIMEOUT }
         );
         setTexto(data);
+        // Generar preguntas con IA basadas en el texto real
+        await generarPreguntas(data);
       } catch (error) {
         Alert.alert('Error', 'No se pudo cargar el texto.', [
           { text: 'Volver', onPress: () => navigation.goBack() },
@@ -58,27 +82,59 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
   };
 
   const evaluarRespuestas = async () => {
-    const sinResponder = PREGUNTAS_EJEMPLO.filter(p => respuestas[p.id] === undefined);
+    const sinResponder = preguntas.filter(p => respuestas[p.id] === undefined);
     if (sinResponder.length > 0) {
       Alert.alert('Preguntas sin responder', 'Por favor responde todas las preguntas antes de continuar.');
       return;
     }
     setEvaluando(true);
-    try {
-      // TODO: Llamar al servicio de IA para evaluar respuestas
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setResultado({
-        puntaje: 78,
-        retroalimentacion: 'Muy bien. Comprendiste los puntos principales del texto. Tu respuesta sobre el significado de la frase fue reflexiva.',
-        errores: ['En la pregunta 1, el tema principal es la imaginacion infantil, no los viajes.'],
-        recomendacion: 'Te recomendamos leer "La Tortuga y la Liebre" para reforzar la comprension de moralejas.',
-      });
-      setFase('resultado');
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo evaluar. Intenta de nuevo.');
-    } finally {
-      setEvaluando(false);
+
+    // Marcar tarea como completada inmediatamente
+    if (tareaId) {
+      axios.put(
+        `${API_CONFIG.BASE_URL}/tareas/${tareaId}/estado`,
+        { estado: 'completada' },
+        { timeout: API_CONFIG.TIMEOUT }
+      ).catch(() => {});
     }
+
+    let evaluacion = null;
+
+    try {
+      const { data } = await axios.post(
+        `${API_CONFIG.BASE_URL}/ia/evaluar-lectura`,
+        { texto, preguntas, respuestas },
+        { timeout: 30000 }
+      );
+      evaluacion = data;
+    } catch {
+      setEvaluando(false);
+      Alert.alert(
+        'IA no disponible',
+        'No se pudo evaluar tu ejercicio en este momento. Verifica tu conexión e intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Guardar resultado real en la BD
+    if (texto?.id && usuario?.id) {
+      axios.post(
+        `${API_CONFIG.BASE_URL}/progreso/${usuario.id}/lectura`,
+        {
+          texto_id: texto.id,
+          puntaje: evaluacion.puntaje,
+          respuestas,
+          retroalimentacion: evaluacion.retroalimentacion,
+          errores: evaluacion.errores || [],
+        },
+        { timeout: API_CONFIG.TIMEOUT }
+      ).catch(() => {});
+    }
+
+    setResultado(evaluacion);
+    setFase('resultado');
+    setEvaluando(false);
   };
 
   // --- CARGANDO ----------------------------------------------------------------
@@ -129,16 +185,19 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
   // --- FASE: PREGUNTAS ---------------------------------------------------------
   if (fase === 'preguntas') {
     return (
-      <View style={styles.contenedor}>
+      <KeyboardAvoidingView
+        style={styles.contenedor}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.barraTop}>
           <TouchableOpacity onPress={() => setFase('lectura')}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#424242" />
           </TouchableOpacity>
           <Text style={styles.tituloBar}>Preguntas de comprension</Text>
-          <Text style={styles.contadorPreguntas}>{Object.keys(respuestas).length}/{PREGUNTAS_EJEMPLO.length}</Text>
+          <Text style={styles.contadorPreguntas}>{Object.keys(respuestas).length}/{preguntas.length}</Text>
         </View>
         <ScrollView style={styles.scrollPreguntas}>
-          {PREGUNTAS_EJEMPLO.map((pregunta, index) => (
+          {preguntas.map((pregunta, index) => (
             <View key={pregunta.id} style={styles.tarjetaPregunta}>
               <Text style={styles.numeroPregunta}>Pregunta {index + 1}</Text>
               <Text style={styles.textoPregunta}>{pregunta.pregunta}</Text>
@@ -194,11 +253,9 @@ const EjercicioLecturaScreen = ({ route, navigation }) => {
           </TouchableOpacity>
           <View style={{ height: 30 }} />
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
-
-  // --- FASE: RESULTADO ---------------------------------------------------------
   return (
     <View style={styles.contenedor}>
       <ScrollView contentContainerStyle={styles.scrollResultado}>
@@ -318,3 +375,5 @@ const styles = StyleSheet.create({
 });
 
 export default EjercicioLecturaScreen;
+
+  // --- FASE: RESULTADO ---------------------------------------------------------
