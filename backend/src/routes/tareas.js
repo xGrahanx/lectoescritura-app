@@ -11,6 +11,7 @@
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -155,22 +156,24 @@ router.post('/', async (req, res) => {
     });
     if (!estudiante) return res.status(404).json({ mensaje: 'Estudiante no encontrado' });
 
-    const nuevaTarea = await prisma.tareas.create({
-      data: {
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim(),
-        tipo,
-        docente_id: parseInt(docenteId),
-        estudiante_id: parseInt(estudianteId),
-        fecha_limite: fecha_limite ? (() => {
-          const d = new Date(fecha_limite);
-          return isNaN(d.getTime()) ? null : d;
-        })() : null,
-        es_avanzada: es_avanzada || false,
-        estado: 'pendiente',
-        texto_id: texto_id ? parseInt(texto_id) : null,
-        ejercicio_id: ejercicio_id ? parseInt(ejercicio_id) : null,
-      },
+    const nuevaTarea = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.tareas.create({
+        data: {
+          titulo: titulo.trim(),
+          descripcion: descripcion.trim(),
+          tipo,
+          docente_id: parseInt(docenteId),
+          estudiante_id: parseInt(estudianteId),
+          fecha_limite: fecha_limite ? (() => {
+            const d = new Date(fecha_limite);
+            return isNaN(d.getTime()) ? null : d;
+          })() : null,
+          es_avanzada: es_avanzada || false,
+          estado: 'pendiente',
+          texto_id: texto_id ? parseInt(texto_id) : null,
+          ejercicio_id: ejercicio_id ? parseInt(ejercicio_id) : null,
+        },
+      });
     });
 
     res.status(201).json({ mensaje: 'Tarea creada exitosamente', tarea: nuevaTarea });
@@ -219,9 +222,8 @@ router.delete('/:id', async (req, res) => {
     if (!tarea) return res.status(404).json({ mensaje: 'Tarea no encontrada' });
 
     // Soft delete: desactivar en vez de eliminar físicamente
-    await prisma.tareas.update({
-      where: { id },
-      data: { activo: false },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.tareas.update({ where: { id }, data: { activo: false } });
     });
 
     res.json({ mensaje: `Tarea "${tarea.titulo}" eliminada correctamente` });

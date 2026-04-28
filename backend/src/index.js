@@ -24,6 +24,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// ─── Middleware de auditoría ──────────────────────────────────────────────────
+// El usuario_id se inyecta por ruta usando conAuditoria() en cada operación
+
 app.use('/api/usuarios',   usuariosRouter);
 app.use('/api/auth',       authRouter);
 app.use('/api/grupos',     gruposRouter);

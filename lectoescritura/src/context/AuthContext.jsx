@@ -8,6 +8,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 // Creamos el contexto
 export const AuthContext = createContext();
@@ -31,7 +32,10 @@ export const AuthProvider = ({ children }) => {
       const usuarioGuardado = await AsyncStorage.getItem('usuario');
       if (tokenGuardado && usuarioGuardado) {
         setToken(tokenGuardado);
-        setUsuario(JSON.parse(usuarioGuardado));
+        const u = JSON.parse(usuarioGuardado);
+        setUsuario(u);
+        // Restaurar el header de auditoría al reabrir la app
+        axios.defaults.headers.common['x-usuario-id'] = String(u.id);
       }
     } catch (error) {
       console.error('Error al cargar sesión:', error);
@@ -51,6 +55,8 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('usuario', JSON.stringify(datosUsuario));
       setToken(tokenJWT);
       setUsuario(datosUsuario);
+      // Inyectar el usuario_id en todos los requests de axios para la auditoría
+      axios.defaults.headers.common['x-usuario-id'] = String(datosUsuario.id);
     } catch (error) {
       console.error('Error al guardar sesión:', error);
     }
@@ -65,6 +71,8 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem('usuario');
       setToken(null);
       setUsuario(null);
+      // Limpiar el header de auditoría
+      delete axios.defaults.headers.common['x-usuario-id'];
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }

@@ -21,7 +21,55 @@ ALTER TABLE grupos_estudiantes ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT T
 
 -- ─── PASO 2: Crear triggers para TODAS las tablas ───────────────────────────
 
--- La función registrar_auditoria() ya existe, ahora crear triggers para todas las tablas
+-- Función genérica de auditoría
+-- Detecta borrado lógico (activo: true → false) y lo registra como DELETE
+-- Maneja tablas sin columna 'id' (ej: grupos_estudiantes con clave compuesta)
+CREATE OR REPLACE FUNCTION registrar_auditoria()
+RETURNS TRIGGER AS $$
+DECLARE
+    operacion_real VARCHAR(20);
+    registro_id_val INT;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        BEGIN
+            registro_id_val := OLD.id;
+        EXCEPTION WHEN undefined_column THEN
+            registro_id_val := NULL;
+        END;
+        INSERT INTO auditoria (tabla, operacion, registro_id, datos_anteriores)
+        VALUES (TG_TABLE_NAME, 'DELETE', registro_id_val, row_to_json(OLD));
+        RETURN OLD;
+
+    ELSIF (TG_OP = 'UPDATE') THEN
+        BEGIN
+            registro_id_val := NEW.id;
+        EXCEPTION WHEN undefined_column THEN
+            registro_id_val := NULL;
+        END;
+        -- Si activo cambió de true a false = borrado lógico → registrar como DELETE
+        IF (OLD.activo = true AND NEW.activo = false) THEN
+            operacion_real := 'DELETE';
+        ELSE
+            operacion_real := 'UPDATE';
+        END IF;
+        INSERT INTO auditoria (tabla, operacion, registro_id, datos_anteriores, datos_nuevos)
+        VALUES (TG_TABLE_NAME, operacion_real, registro_id_val, row_to_json(OLD), row_to_json(NEW));
+        RETURN NEW;
+
+    ELSIF (TG_OP = 'INSERT') THEN
+        BEGIN
+            registro_id_val := NEW.id;
+        EXCEPTION WHEN undefined_column THEN
+            registro_id_val := NULL;
+        END;
+        INSERT INTO auditoria (tabla, operacion, registro_id, datos_nuevos)
+        VALUES (TG_TABLE_NAME, 'INSERT', registro_id_val, row_to_json(NEW));
+        RETURN NEW;
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- TRIGGERS PARA: usuarios

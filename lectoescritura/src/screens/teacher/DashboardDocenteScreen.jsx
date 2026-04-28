@@ -131,7 +131,13 @@ const DashboardDocenteScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           {grupos.map(grupo => (
-            <View key={grupo.id} style={styles.tarjetaGrupo}>
+            <TouchableOpacity
+              key={grupo.id}
+              style={styles.tarjetaGrupo}
+              onPress={() => navigation.navigate('Estudiantes', {
+                screen: 'ListaEstudiantes', params: { grupoId: grupo.id, grupoNombre: grupo.nombre },
+              })}
+            >
               <View style={styles.iconoGrupo}>
                 <MaterialCommunityIcons name="google-classroom" size={22} color="#2E7D32" />
               </View>
@@ -142,7 +148,7 @@ const DashboardDocenteScreen = ({ navigation }) => {
                 </Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#BDBDBD" />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}

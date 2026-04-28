@@ -132,8 +132,21 @@ lectoescritura-app/
 ```bash
 cd backend
 npm install
-npx prisma migrate dev --name init
+
+# Aplicar migración de auditoría (primera vez)
+.\aplicar-migracion.ps1
+
+# O si prefieres usar psql directamente:
+# $env:PGPASSWORD = "tu_password"
+# & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -h localhost -p 5432 -U postgres -d lectoescritura -f prisma/migrations/soft_delete_y_auditoria_completa.sql
+
+# Generar cliente de Prisma
+npx prisma generate
+
+# Insertar datos de prueba (opcional)
 node src/seed.js
+
+# Iniciar servidor
 npm run dev
 ```
 

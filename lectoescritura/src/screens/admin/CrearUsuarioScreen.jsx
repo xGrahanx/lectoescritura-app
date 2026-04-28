@@ -23,6 +23,7 @@ const CrearUsuarioScreen = ({ navigation }) => {
   const [rol, setRol]           = useState('estudiante');
   const [grado, setGrado]       = useState('');
   const [cargando, setCargando] = useState(false);
+  const [verPassword, setVerPassword] = useState(false);
 
   const roles = [
     { key: 'estudiante',    label: 'Estudiante', icono: 'school',         color: '#4A90D9' },
@@ -108,11 +109,19 @@ const CrearUsuarioScreen = ({ navigation }) => {
           />
 
           <Text style={styles.etiqueta}>Contrasena temporal *</Text>
-          <TextInput
-            style={styles.input} placeholder="Minimo 6 caracteres"
-            value={password} onChangeText={setPassword}
-            secureTextEntry placeholderTextColor="#BDBDBD"
-          />
+          <View style={styles.inputContenedor}>
+            <TextInput
+              style={styles.inputFlex} placeholder="Minimo 6 caracteres"
+              value={password} onChangeText={setPassword}
+              secureTextEntry={!verPassword} placeholderTextColor="#BDBDBD"
+            />
+            <TouchableOpacity onPress={() => setVerPassword(!verPassword)} style={styles.ojito}>
+              <MaterialCommunityIcons
+                name={verPassword ? 'eye-off' : 'eye'}
+                size={22} color="#9E9E9E"
+              />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.notaInfo}>
             <MaterialCommunityIcons name="information" size={16} color="#4A90D9" />
@@ -160,6 +169,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1,
     borderColor: '#E0E0E0', paddingHorizontal: 14, height: 48, fontSize: 15, color: '#212121',
   },
+  inputContenedor: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1,
+    borderColor: '#E0E0E0', height: 48,
+  },
+  inputFlex: { flex: 1, paddingHorizontal: 14, fontSize: 15, color: '#212121' },
+  ojito: { paddingHorizontal: 12 },
   notaInfo: {
     flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#E3F2FD',
     borderRadius: 10, padding: 12, marginTop: 16, marginBottom: 16,

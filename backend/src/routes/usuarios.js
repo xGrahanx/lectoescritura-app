@@ -9,6 +9,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -151,25 +152,11 @@ router.post('/', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Crear el usuario en la BD
-    const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        nombre,
-        apellido,
-        correo,
-        password: passwordHash,
-        rol: rol || 'estudiante',
-        grado: grado || null,
-      },
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        correo: true,
-        rol: true,
-        grado: true,
-        activo: true,
-        creado_en: true,
-      },
+    const nuevoUsuario = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.usuario.create({
+        data: { nombre, apellido, correo, password: passwordHash, rol: rol || 'estudiante', grado: grado || null },
+        select: { id: true, nombre: true, apellido: true, correo: true, rol: true, grado: true, activo: true, creado_en: true },
+      });
     });
 
     res.status(201).json({
@@ -222,20 +209,19 @@ router.put('/:id', async (req, res) => {
     }
 
     // Actualizar solo los campos que vienen en el body
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id },
-      data: {
-        ...(nombre    && { nombre }),
-        ...(apellido  && { apellido }),
-        ...(correo    && { correo }),
-        ...(rol       && { rol }),
-        ...(grado !== undefined && { grado: grado || null }),
-        ...(activo !== undefined && { activo }),
-      },
-      select: {
-        id: true, nombre: true, apellido: true,
-        correo: true, rol: true, grado: true, activo: true,
-      },
+    const usuarioActualizado = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.usuario.update({
+        where: { id },
+        data: {
+          ...(nombre    && { nombre }),
+          ...(apellido  && { apellido }),
+          ...(correo    && { correo }),
+          ...(rol       && { rol }),
+          ...(grado !== undefined && { grado: grado || null }),
+          ...(activo !== undefined && { activo }),
+        },
+        select: { id: true, nombre: true, apellido: true, correo: true, rol: true, grado: true, activo: true },
+      });
     });
 
     res.json({ mensaje: 'Usuario actualizado correctamente', usuario: usuarioActualizado });
@@ -263,9 +249,8 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Soft delete: desactivar en vez de eliminar fisicamente
-    await prisma.usuario.update({
-      where: { id },
-      data: { activo: false },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.usuario.update({ where: { id }, data: { activo: false } });
     });
 
     res.json({ mensaje: `Usuario ${usuario.nombre} ${usuario.apellido} eliminado correctamente` });

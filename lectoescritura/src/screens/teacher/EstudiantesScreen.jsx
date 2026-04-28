@@ -22,8 +22,10 @@ const colorRendimiento = (promedio) => {
   return '#F44336';
 };
 
-const EstudiantesScreen = ({ navigation }) => {
+const EstudiantesScreen = ({ navigation, route }) => {
   const { usuario }                   = useAuth();
+  const grupoId     = route?.params?.grupoId || null;
+  const grupoNombre = route?.params?.grupoNombre || null;
   const [estudiantes, setEstudiantes] = useState([]);
   const [busqueda, setBusqueda]       = useState('');
   const [filtro, setFiltro]           = useState('todos');
@@ -38,9 +40,14 @@ const EstudiantesScreen = ({ navigation }) => {
         { timeout: API_CONFIG.TIMEOUT }
       );
 
+      // Si viene grupoId, filtrar solo ese grupo
+      const gruposFiltrados = grupoId
+        ? data.filter(g => g.id === grupoId)
+        : data;
+
       // Extraer todos los estudiantes de todos los grupos del docente
       const estudiantesExtraidos = [];
-      for (const grupo of data) {
+      for (const grupo of gruposFiltrados) {
         for (const ge of grupo.estudiantes) {
           let promedio = 0;
           try {
@@ -68,7 +75,7 @@ const EstudiantesScreen = ({ navigation }) => {
     } finally {
       setCargando(false);
     }
-  }, [usuario.id]);
+  }, [usuario.id, grupoId]);
 
   useEffect(() => {
     cargarEstudiantes();
@@ -121,7 +128,7 @@ const EstudiantesScreen = ({ navigation }) => {
       <View style={styles.encabezado}>
         <View style={styles.tituloRow}>
           <MaterialCommunityIcons name="account-group" size={26} color="#1A237E" />
-          <Text style={styles.titulo}> Mis Estudiantes</Text>
+          <Text style={styles.titulo}> {grupoNombre ? grupoNombre : 'Mis Estudiantes'}</Text>
         </View>
         <Text style={styles.subtitulo}>{estudiantes.length} estudiantes registrados</Text>
       </View>

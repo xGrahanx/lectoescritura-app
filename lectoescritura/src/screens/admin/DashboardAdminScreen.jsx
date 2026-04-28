@@ -19,28 +19,55 @@ const ACTIVIDAD_RECIENTE = [
 ];
 
 const CONFIG_ACTIVIDAD = {
-  registro: { icono: 'account-plus',   color: '#4A90D9' },
-  tarea:    { icono: 'clipboard-plus', color: '#2E7D32' },
-  alerta:   { icono: 'bell',           color: '#FF9800' },
-  sistema:  { icono: 'sync',           color: '#9C27B0' },
+  INSERT: { icono: 'plus-circle',   color: '#4CAF50' },
+  UPDATE: { icono: 'pencil-circle', color: '#FF9800' },
+  DELETE: { icono: 'delete-circle', color: '#F44336' },
+};
+
+const TABLAS_LEGIBLES = {
+  usuarios:             'Usuario',
+  tareas:               'Tarea',
+  grupos:               'Grupo',
+  grupos_estudiantes:   'Grupo-Estudiante',
+  alertas:              'Alerta',
+  resultados_lectura:   'Resultado Lectura',
+  resultados_escritura: 'Resultado Escritura',
+  ejercicios_ia:        'Ejercicio IA',
+  progreso_diario:      'Progreso',
+  textos:               'Texto',
+  ejercicios_escritura: 'Ejercicio Escritura',
+  configuracion_sistema:'Configuración',
+};
+
+const OPERACION_LEGIBLE = { INSERT: 'creó', UPDATE: 'modificó', DELETE: 'eliminó' };
+
+const formatearRelativa = (fecha) => {
+  if (!fecha) return '';
+  const diff = Math.floor((Date.now() - new Date(fecha)) / 60000);
+  if (diff < 1)  return 'Ahora mismo';
+  if (diff < 60) return `Hace ${diff} min`;
+  const horas = Math.floor(diff / 60);
+  if (horas < 24) return `Hace ${horas}h`;
+  return `Hace ${Math.floor(horas / 24)} días`;
 };
 
 const DashboardAdminScreen = ({ navigation }) => {
   const { usuario, cerrarSesion } = useAuth();
-  const [stats, setStats]           = useState(null);
-  const [cargando, setCargando]     = useState(true);
+  const [stats, setStats]                   = useState(null);
+  const [cargando, setCargando]             = useState(true);
   const [servidorOnline, setServidorOnline] = useState(false);
+  const [actividadReciente, setActividadReciente] = useState([]);
 
-  // Cargar estadisticas reales desde el backend
   const cargarStats = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API_CONFIG.BASE_URL}/usuarios/stats`, {
-        timeout: API_CONFIG.TIMEOUT,
-      });
-      setStats(data);
+      const [statsRes, auditoriaRes] = await Promise.all([
+        axios.get(`${API_CONFIG.BASE_URL}/usuarios/stats`, { timeout: API_CONFIG.TIMEOUT }),
+        axios.get(`${API_CONFIG.BASE_URL}/auditoria`, { params: { limit: 8 }, timeout: API_CONFIG.TIMEOUT }),
+      ]);
+      setStats(statsRes.data);
+      setActividadReciente(auditoriaRes.data.registros || []);
       setServidorOnline(true);
     } catch (error) {
-      // Si falla la conexion, mostrar ceros y marcar servidor offline
       setStats({ totalUsuarios: 0, totalDocentes: 0, totalEstudiantes: 0, totalAdmins: 0 });
       setServidorOnline(false);
     } finally {
@@ -141,24 +168,50 @@ const DashboardAdminScreen = ({ navigation }) => {
 
       {/* Actividad reciente */}
       <View style={styles.seccion}>
-        <View style={styles.tituloRow}>
-          <MaterialCommunityIcons name="history" size={20} color="#1A237E" />
-          <Text style={styles.tituloSeccion}>  Actividad reciente</Text>
+        <View style={styles.tituloRowSpaced}>
+          <View style={styles.tituloRow}>
+            <MaterialCommunityIcons name="history" size={20} color="#1A237E" />
+            <Text style={styles.tituloSeccion}>  Actividad reciente</Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Auditoria')}>
+            <Text style={styles.verTodas}>Ver todo</Text>
+          </TouchableOpacity>
         </View>
-        {ACTIVIDAD_RECIENTE.map(item => {
-          const cfg = CONFIG_ACTIVIDAD[item.tipo];
-          return (
-            <View key={item.id} style={styles.tarjetaActividad}>
-              <View style={[styles.iconoActividad, { backgroundColor: cfg.color + '15' }]}>
-                <MaterialCommunityIcons name={cfg.icono} size={18} color={cfg.color} />
+
+        {actividadReciente.length === 0 ? (
+          <View style={styles.sinActividad}>
+            <MaterialCommunityIcons name="history" size={32} color="#BDBDBD" />
+            <Text style={styles.textoSinActividad}>Sin actividad registrada aún</Text>
+          </View>
+        ) : (
+          actividadReciente.map(item => {
+            const cfg = CONFIG_ACTIVIDAD[item.operacion] || { icono: 'circle', color: '#9E9E9E' };
+            const tabla = TABLAS_LEGIBLES[item.tabla] || item.tabla;
+            const operacion = OPERACION_LEGIBLE[item.operacion] || item.operacion;
+            const quien = item.usuario
+              ? `${item.usuario.nombre} ${item.usuario.apellido}`
+              : 'Sistema';
+            // Extraer nombre del registro si existe
+            const datos = item.datos_nuevos || item.datos_anteriores;
+            const nombreRegistro = datos?.nombre || datos?.titulo || datos?.correo || '';
+
+            return (
+              <View key={item.id} style={styles.tarjetaActividad}>
+                <View style={[styles.iconoActividad, { backgroundColor: cfg.color + '15' }]}>
+                  <MaterialCommunityIcons name={cfg.icono} size={18} color={cfg.color} />
+                </View>
+                <View style={styles.infoActividad}>
+                  <Text style={styles.mensajeActividad}>
+                    <Text style={{ fontWeight: '600' }}>{quien}</Text>
+                    {` ${operacion} ${tabla}`}
+                    {nombreRegistro ? `: "${nombreRegistro}"` : ''}
+                  </Text>
+                  <Text style={styles.horaActividad}>{formatearRelativa(item.creado_en)}</Text>
+                </View>
               </View>
-              <View style={styles.infoActividad}>
-                <Text style={styles.mensajeActividad}>{item.mensaje}</Text>
-                <Text style={styles.horaActividad}>{item.hora}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </View>
 
       <View style={{ height: 30 }} />
@@ -219,6 +272,10 @@ const styles = StyleSheet.create({
   infoActividad: { flex: 1 },
   mensajeActividad: { fontSize: 13, color: '#212121', lineHeight: 18 },
   horaActividad: { fontSize: 11, color: '#9E9E9E', marginTop: 4 },
+  tituloRowSpaced: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  verTodas: { fontSize: 13, color: '#6A1B9A', fontWeight: '600' },
+  sinActividad: { alignItems: 'center', paddingVertical: 20 },
+  textoSinActividad: { fontSize: 13, color: '#9E9E9E', marginTop: 8 },
 });
 
 export default DashboardAdminScreen;

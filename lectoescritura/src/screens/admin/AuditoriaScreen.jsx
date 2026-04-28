@@ -24,12 +24,78 @@ const TABLAS_NOMBRES = {
   usuarios: 'Usuarios',
   tareas: 'Tareas',
   grupos: 'Grupos',
+  grupos_estudiantes: 'Grupos - Estudiantes',
+  alertas: 'Alertas',
   resultados_lectura: 'Resultados de Lectura',
   resultados_escritura: 'Resultados de Escritura',
   ejercicios_ia: 'Ejercicios IA',
   progreso_diario: 'Progreso Diario',
   textos: 'Textos',
   ejercicios_escritura: 'Ejercicios de Escritura',
+  configuracion_sistema: 'Configuración',
+};
+
+// Extrae un resumen legible de los datos del registro según la tabla
+const extraerResumen = (registro) => {
+  const datos = registro.datos_nuevos || registro.datos_anteriores;
+  if (!datos) return null;
+
+  switch (registro.tabla) {
+    case 'usuarios':
+      return datos.nombre
+        ? `${datos.nombre} ${datos.apellido || ''} (${datos.rol || ''}) - ${datos.correo || ''}`
+        : null;
+    case 'tareas':
+      return datos.titulo
+        ? `"${datos.titulo}" → Estado: ${datos.estado || '-'}`
+        : null;
+    case 'grupos':
+      return datos.nombre ? `Grupo: "${datos.nombre}"` : null;
+    case 'grupos_estudiantes':
+      return `Estudiante ID: ${datos.estudiante_id} → Grupo ID: ${datos.grupo_id}`;
+    case 'textos':
+      return datos.titulo
+        ? `"${datos.titulo}" - Nivel: ${datos.nivel || '-'}`
+        : null;
+    case 'ejercicios_escritura':
+      return datos.titulo
+        ? `"${datos.titulo}" - Tipo: ${datos.tipo || '-'}`
+        : null;
+    case 'ejercicios_ia':
+      return `Tipo: ${datos.tipo || '-'} - Puntaje: ${datos.puntaje ?? '-'}`;
+    case 'resultados_lectura':
+      return `Puntaje: ${datos.puntaje ?? '-'} - Estudiante ID: ${datos.estudiante_id || '-'}`;
+    case 'resultados_escritura':
+      return `Puntaje: ${datos.puntaje ?? '-'} - Estudiante ID: ${datos.estudiante_id || '-'}`;
+    case 'progreso_diario':
+      return `Promedio: ${datos.puntaje_promedio ?? '-'}% - Ejercicios: ${datos.ejercicios_completados ?? '-'}`;
+    case 'alertas':
+      return datos.titulo ? `"${datos.titulo}" - Tipo: ${datos.tipo || '-'}` : null;
+    case 'configuracion_sistema':
+      return `Umbral alto: ${datos.umbral_alto_rendimiento ?? '-'}% / bajo: ${datos.umbral_bajo_rendimiento ?? '-'}%`;
+    default:
+      return null;
+  }
+};
+
+// Extrae los campos que cambiaron en un UPDATE
+const extraerCambios = (registro) => {
+  if (registro.operacion !== 'UPDATE') return null;
+  const antes = registro.datos_anteriores;
+  const despues = registro.datos_nuevos;
+  if (!antes || !despues) return null;
+
+  const camposIgnorar = ['creado_en', 'actualizado_en', 'id'];
+  const cambios = [];
+
+  Object.keys(despues).forEach(key => {
+    if (camposIgnorar.includes(key)) return;
+    if (JSON.stringify(antes[key]) !== JSON.stringify(despues[key])) {
+      cambios.push({ campo: key, antes: antes[key], despues: despues[key] });
+    }
+  });
+
+  return cambios.length > 0 ? cambios : null;
 };
 
 const AuditoriaScreen = ({ navigation }) => {
@@ -230,8 +296,11 @@ const AuditoriaScreen = ({ navigation }) => {
         ) : (
           registrosFiltrados.map(registro => {
             const operacion = OPERACIONES[registro.operacion] || {};
+            const resumen = extraerResumen(registro);
+            const cambios = extraerCambios(registro);
             return (
               <View key={registro.id} style={styles.tarjetaRegistro}>
+                {/* Cabecera */}
                 <View style={styles.headerRegistro}>
                   <View style={[styles.iconoOperacion, { backgroundColor: operacion.color + '20' }]}>
                     <MaterialCommunityIcons
@@ -253,6 +322,7 @@ const AuditoriaScreen = ({ navigation }) => {
                   </View>
                 </View>
 
+                {/* Quién hizo el cambio */}
                 {registro.usuario && (
                   <View style={styles.usuarioRow}>
                     <MaterialCommunityIcons name="account" size={14} color="#757575" />
@@ -263,10 +333,31 @@ const AuditoriaScreen = ({ navigation }) => {
                   </View>
                 )}
 
-                {registro.registro_id && (
-                  <Text style={styles.detalleRegistro}>
-                    ID del registro: {registro.registro_id}
-                  </Text>
+                {/* Resumen del registro afectado */}
+                {resumen && (
+                  <View style={styles.resumenRow}>
+                    <MaterialCommunityIcons name="information-outline" size={14} color="#1A237E" />
+                    <Text style={styles.textoResumen}> {resumen}</Text>
+                  </View>
+                )}
+
+                {/* Cambios específicos en UPDATE */}
+                {cambios && cambios.length > 0 && (
+                  <View style={styles.cambiosContenedor}>
+                    <Text style={styles.tituloCambios}>Cambios:</Text>
+                    {cambios.map((c, i) => (
+                      <View key={i} style={styles.filaCambio}>
+                        <Text style={styles.campoCambio}>{c.campo}:</Text>
+                        <Text style={styles.antesValor} numberOfLines={1}>
+                          {String(c.antes ?? '-')}
+                        </Text>
+                        <MaterialCommunityIcons name="arrow-right" size={12} color="#9E9E9E" />
+                        <Text style={styles.despuesValor} numberOfLines={1}>
+                          {String(c.despues ?? '-')}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
                 )}
               </View>
             );
@@ -422,6 +513,54 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9E9E9E',
     marginTop: 4,
+  },
+  resumenRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 6,
+    backgroundColor: '#E8EAF6',
+    borderRadius: 8,
+    padding: 8,
+  },
+  textoResumen: {
+    fontSize: 12,
+    color: '#1A237E',
+    flex: 1,
+    lineHeight: 18,
+  },
+  cambiosContenedor: {
+    marginTop: 8,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    padding: 8,
+  },
+  tituloCambios: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#F57F17',
+    marginBottom: 4,
+  },
+  filaCambio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+    flexWrap: 'wrap',
+  },
+  campoCambio: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#424242',
+  },
+  antesValor: {
+    fontSize: 11,
+    color: '#F44336',
+    maxWidth: 80,
+  },
+  despuesValor: {
+    fontSize: 11,
+    color: '#4CAF50',
+    maxWidth: 80,
   },
   sinDatos: {
     alignItems: 'center',

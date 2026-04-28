@@ -13,12 +13,13 @@ model Usuario {
   apellido                                String                 @db.VarChar(100)
   correo                                  String                 @unique @db.VarChar(150)
   password                                String                 @db.VarChar(255)
-  rol                                     tipo_rol
   grado                                   String?                @db.VarChar(50)
   activo                                  Boolean?               @default(true)
   creado_en                               DateTime?              @default(now()) @db.Timestamp(6)
+  rol                                     tipo_rol
   alertas_alertas_docente_idTousuarios    alertas[]              @relation("alertas_docente_idTousuarios")
   alertas_alertas_estudiante_idTousuarios alertas[]              @relation("alertas_estudiante_idTousuarios")
+  auditoria                               auditoria[]
   ejercicios_ia                           ejercicios_ia[]
   grupos                                  Grupo[]
   grupos_estudiantes                      GrupoEstudiante[]
@@ -27,7 +28,6 @@ model Usuario {
   resultados_lectura                      resultados_lectura[]
   tareas_tareas_docente_idTousuarios      tareas[]               @relation("tareas_docente_idTousuarios")
   tareas_tareas_estudiante_idTousuarios   tareas[]               @relation("tareas_estudiante_idTousuarios")
-  auditoria                               auditoria[]
 
   @@map("usuarios")
 }
@@ -35,9 +35,9 @@ model Usuario {
 model Grupo {
   id                 Int               @id @default(autoincrement())
   nombre             String            @unique @db.VarChar(100)
-  docente_id         Int?
   activo             Boolean?          @default(true)
   creado_en          DateTime?         @default(now()) @db.Timestamp(6)
+  docente_id         Int?
   usuarios           Usuario?          @relation(fields: [docente_id], references: [id], onUpdate: NoAction)
   grupos_estudiantes GrupoEstudiante[]
 
@@ -45,9 +45,9 @@ model Grupo {
 }
 
 model GrupoEstudiante {
-  grupo_id      Int
-  estudiante_id Int
   asignado_en   DateTime? @default(now()) @db.Timestamp(6)
+  estudiante_id Int
+  grupo_id      Int
   activo        Boolean?  @default(true)
   usuarios      Usuario   @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   grupos        Grupo     @relation(fields: [grupo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -64,8 +64,8 @@ model alertas {
   titulo                                   String?     @db.VarChar(200)
   mensaje                                  String?
   leida                                    Boolean?    @default(false)
-  activo                                   Boolean?    @default(true)
   creado_en                                DateTime?   @default(now()) @db.Timestamp(6)
+  activo                                   Boolean?    @default(true)
   usuarios_alertas_docente_idTousuarios    Usuario?    @relation("alertas_docente_idTousuarios", fields: [docente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuarios_alertas_estudiante_idTousuarios Usuario?    @relation("alertas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -87,8 +87,8 @@ model ejercicios_escritura {
   descripcion          String?
   contenido            String?
   nivel                tipo_nivel
-  activo               Boolean?               @default(true)
   creado_en            DateTime?              @default(now()) @db.Timestamp(6)
+  activo               Boolean?               @default(true)
   resultados_escritura resultados_escritura[]
   tareas               tareas[]
 }
@@ -101,8 +101,8 @@ model ejercicios_ia {
   preguntas     Json
   respuestas    Json?
   puntaje       Int?
-  activo        Boolean?  @default(true)
   creado_en     DateTime? @default(now()) @db.Timestamp(6)
+  activo        Boolean?  @default(true)
   usuarios      Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -126,8 +126,8 @@ model resultados_escritura {
   respuesta            String?
   errores_ortograficos Json?
   retroalimentacion    String?
-  activo               Boolean?              @default(true)
   creado_en            DateTime?             @default(now()) @db.Timestamp(6)
+  activo               Boolean?              @default(true)
   ejercicios_escritura ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuarios             Usuario?              @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -141,30 +141,30 @@ model resultados_lectura {
   respuestas        Json?
   retroalimentacion String?
   errores           Json?
-  activo            Boolean?  @default(true)
   creado_en         DateTime? @default(now()) @db.Timestamp(6)
+  activo            Boolean?  @default(true)
   usuarios          Usuario?  @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   textos            textos?   @relation(fields: [texto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model tareas {
-  id                                      Int                @id @default(autoincrement())
-  titulo                                  String             @db.VarChar(100)
+  id                                      Int                   @id @default(autoincrement())
+  titulo                                  String                @db.VarChar(100)
   descripcion                             String
   tipo                                    tipo_tarea
   docente_id                              Int?
   estudiante_id                           Int?
-  texto_id                                Int?
+  fecha_limite                            DateTime?             @db.Date
+  estado                                  tipo_estado_tarea?    @default(pendiente)
+  es_avanzada                             Boolean?              @default(false)
+  creado_en                               DateTime?             @default(now()) @db.Timestamp(6)
   ejercicio_id                            Int?
-  fecha_limite                            DateTime?          @db.Date
-  estado                                  tipo_estado_tarea? @default(pendiente)
-  es_avanzada                             Boolean?           @default(false)
-  activo                                  Boolean?           @default(true)
-  creado_en                               DateTime?          @default(now()) @db.Timestamp(6)
-  usuarios_tareas_docente_idTousuarios    Usuario?           @relation("tareas_docente_idTousuarios", fields: [docente_id], references: [id], onUpdate: NoAction)
-  usuarios_tareas_estudiante_idTousuarios Usuario?           @relation("tareas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  textos                                  textos?            @relation(fields: [texto_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  ejercicios_escritura                    ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  texto_id                                Int?
+  activo                                  Boolean?              @default(true)
+  usuarios_tareas_docente_idTousuarios    Usuario?              @relation("tareas_docente_idTousuarios", fields: [docente_id], references: [id], onUpdate: NoAction)
+  ejercicios_escritura                    ejercicios_escritura? @relation(fields: [ejercicio_id], references: [id], onUpdate: NoAction)
+  usuarios_tareas_estudiante_idTousuarios Usuario?              @relation("tareas_estudiante_idTousuarios", fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  textos                                  textos?               @relation(fields: [texto_id], references: [id], onUpdate: NoAction)
 }
 
 model textos {
@@ -190,12 +190,16 @@ model auditoria {
   ip_address       String?   @db.VarChar(50)
   user_agent       String?
   creado_en        DateTime? @default(now()) @db.Timestamp(6)
-  usuario          Usuario?  @relation(fields: [usuario_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  usuario          Usuario?  @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
 
   @@index([tabla])
   @@index([usuario_id])
   @@index([creado_en])
   @@index([operacion])
+  @@index([creado_en], map: "idx_auditoria_fecha")
+  @@index([operacion], map: "idx_auditoria_operacion")
+  @@index([tabla], map: "idx_auditoria_tabla")
+  @@index([usuario_id], map: "idx_auditoria_usuario")
 }
 
 enum Rol {

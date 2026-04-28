@@ -135,7 +135,7 @@ const AsignarTareaScreen = ({ route, navigation }) => {
       Alert.alert(
         '✅ Tarea asignada',
         `La tarea fue asignada a ${estudiante.nombre} ${estudiante.apellido || ''}.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.navigate('DetalleEstudiante', { estudiante }) }]
       );
     } catch (error) {
       const mensaje = error.response?.data?.mensaje || 'No se pudo asignar la tarea.';
