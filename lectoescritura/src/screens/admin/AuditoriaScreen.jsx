@@ -9,9 +9,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, TextInput,
+  Alert, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { API_CONFIG } from '../../utils/constantes';
 
 const OPERACIONES = {
@@ -106,6 +109,7 @@ const AuditoriaScreen = ({ navigation }) => {
   const [filtroTabla, setFiltroTabla] = useState('');
   const [filtroOperacion, setFiltroOperacion] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [exportandoPDF, setExportandoPDF] = useState(false);
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -141,6 +145,46 @@ const AuditoriaScreen = ({ navigation }) => {
   const onRefrescar = () => {
     setRefrescando(true);
     cargarDatos();
+  };
+
+  // Función para exportar a PDF
+  const exportarPDF = async () => {
+    setExportandoPDF(true);
+    try {
+      // Construir URL con los filtros actuales
+      const params = new URLSearchParams();
+      if (filtroTabla) params.append('tabla', filtroTabla);
+      if (filtroOperacion) params.append('operacion', filtroOperacion);
+      
+      const url = `${API_CONFIG.BASE_URL}/auditoria/pdf?${params.toString()}`;
+      const fileUri = FileSystem.documentDirectory + `auditoria-${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Descargar el PDF usando downloadAsync
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri);
+      
+      // Verificar que el archivo se descargó correctamente
+      const fileInfo = await FileSystem.getInfoAsync(downloadResult.uri);
+      
+      if (!fileInfo.exists || fileInfo.size === 0) {
+        throw new Error('El archivo no se descargó correctamente');
+      }
+      
+      // Compartir el archivo
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(downloadResult.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Exportar auditoría',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('PDF descargado', `El archivo se guardó en: ${downloadResult.uri}`);
+      }
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      Alert.alert('Error', 'No se pudo generar el PDF. Verifica tu conexión e intenta de nuevo.');
+    } finally {
+      setExportandoPDF(false);
+    }
   };
 
   const formatearFecha = (fecha) => {
@@ -183,6 +227,22 @@ const AuditoriaScreen = ({ navigation }) => {
           <Text style={styles.titulo}> Auditoría del Sistema</Text>
         </View>
         <Text style={styles.subtitulo}>Bitácora de cambios y operaciones</Text>
+        
+        {/* Botón exportar PDF */}
+        <TouchableOpacity
+          style={styles.botonPDF}
+          onPress={exportarPDF}
+          disabled={exportandoPDF}
+        >
+          {exportandoPDF ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <MaterialCommunityIcons name="file-pdf-box" size={20} color="#FFFFFF" />
+          )}
+          <Text style={styles.textoBotonPDF}>
+            {exportandoPDF ? ' Generando...' : ' Exportar PDF'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -570,6 +630,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9E9E9E',
     marginTop: 12,
+  },
+  botonPDF: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C62828',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  textoBotonPDF: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

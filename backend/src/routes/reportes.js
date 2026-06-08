@@ -344,7 +344,14 @@ router.get('/pdf', async (req, res) => {
     ]);
 
     // Crear el PDF
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ 
+      margin: 0,
+      size: 'A4',
+      info: {
+        Title: 'Reporte de Lectoescritura',
+        Author: 'Sistema Lectoescritura',
+      }
+    });
 
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/pdf');
@@ -353,77 +360,280 @@ router.get('/pdf', async (req, res) => {
     // Pipe el PDF a la respuesta
     doc.pipe(res);
 
-    // ─── Encabezado ───────────────────────────────────────────────────────────
-    doc.fontSize(24).fillColor('#1A237E').text('Reporte de Lectoescritura', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(12).fillColor('#757575').text(
-      `Generado el ${new Date().toLocaleDateString('es-ES', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric' 
-      })}`,
-      { align: 'center' }
-    );
-    doc.moveDown(2);
+    // Colores institucionales
+    const COLORS = {
+      primary: '#1A237E',
+      secondary: '#4A90D9',
+      accent: '#9C27B0',
+      success: '#4CAF50',
+      warning: '#FF9800',
+      error: '#F44336',
+      dark: '#212121',
+      gray: '#757575',
+      lightGray: '#E0E0E0',
+      white: '#FFFFFF',
+      bgLight: '#F5F9FF',
+    };
 
-    // ─── Resumen General ──────────────────────────────────────────────────────
-    doc.fontSize(16).fillColor('#212121').text('Resumen General', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#424242');
-    doc.text(`• Total de estudiantes: ${generalData.totalEstudiantes}`);
-    doc.text(`• Total de docentes: ${generalData.totalDocentes}`);
-    doc.text(`• Total de grupos: ${generalData.totalGrupos}`);
-    doc.text(`• Total de tareas asignadas: ${generalData.totalTareas}`);
-    doc.text(`• Total de ejercicios completados: ${modulosData.total}`);
-    doc.moveDown(1.5);
+    // ─── ENCABEZADO CON BANDA COLORIDA ─────────────────────────────────────────
+    // Banda superior decorativa
+    doc.rect(0, 0, doc.page.width, 80)
+       .fill(COLORS.primary);
+    
+    // Banda secundaria
+    doc.rect(0, 80, doc.page.width, 10)
+       .fill(COLORS.secondary);
 
-    // ─── Distribución de Rendimiento ──────────────────────────────────────────
-    doc.fontSize(16).fillColor('#212121').text('Distribución de Rendimiento', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#424242');
-    doc.text(`• Alto rendimiento (80-100%): ${rendimientoData.alto} estudiantes`);
-    doc.text(`• Rendimiento medio (60-79%): ${rendimientoData.medio} estudiantes`);
-    doc.text(`• Rendimiento bajo (0-59%): ${rendimientoData.bajo} estudiantes`);
-    doc.moveDown(1.5);
+    // Título principal
+    doc.fontSize(28)
+       .fillColor(COLORS.white)
+       .font('Helvetica-Bold')
+       .text('Reporte de Lectoescritura', 50, 25, { align: 'center' });
 
-    // ─── Uso de Módulos ───────────────────────────────────────────────────────
-    doc.fontSize(16).fillColor('#212121').text('Uso de Módulos', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#424242');
-    const porcLectura = modulosData.total > 0 ? Math.round((modulosData.lectura / modulosData.total) * 100) : 0;
-    const porcEscritura = modulosData.total > 0 ? Math.round((modulosData.escritura / modulosData.total) * 100) : 0;
-    const porcIA = modulosData.total > 0 ? Math.round((modulosData.ia / modulosData.total) * 100) : 0;
-    doc.text(`• Lectura: ${modulosData.lectura} ejercicios (${porcLectura}%)`);
-    doc.text(`• Escritura: ${modulosData.escritura} ejercicios (${porcEscritura}%)`);
-    doc.text(`• Ejercicios IA: ${modulosData.ia} ejercicios (${porcIA}%)`);
-    doc.moveDown(1.5);
+    // Subtítulo
+    doc.fontSize(11)
+       .fillColor('#B3E5FC')
+       .font('Helvetica')
+       .text('Escuela Nacional José Gabriel Alviares', 50, 55, { align: 'center' });
 
-    // ─── Progreso Mensual ─────────────────────────────────────────────────────
-    doc.fontSize(16).fillColor('#212121').text('Progreso Mensual', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#424242');
-    progresoData.forEach(mes => {
-      doc.text(`• ${mes.mes}: ${mes.promedio}% promedio`);
+    // Fecha de generación
+    doc.fontSize(10)
+       .fillColor(COLORS.gray)
+       .font('Helvetica')
+       .text(
+         `Generado el ${new Date().toLocaleDateString('es-ES', { 
+           day: '2-digit', 
+           month: 'long', 
+           year: 'numeric',
+           hour: '2-digit',
+           minute: '2-digit',
+         })}`,
+         50, 105,
+         { align: 'center' }
+       );
+
+    let yPosition = 135;
+
+    // ─── FUNCIÓN PARA DIBUJAR TARJETAS ─────────────────────────────────────────
+    const drawCard = (title, content, bgColor, borderColor, iconText) => {
+      const cardHeight = 70;
+      const cardY = yPosition;
+      
+      // Sombra simulada
+      doc.rect(54, cardY + 4, doc.page.width - 100, cardHeight)
+         .fill('#E0E0E0');
+      
+      // Tarjeta principal
+      doc.rect(50, cardY, doc.page.width - 100, cardHeight)
+         .fill(bgColor)
+         .stroke(borderColor);
+      
+      // Barra lateral de color
+      doc.rect(50, cardY, 6, cardHeight)
+         .fill(borderColor);
+      
+      // Icono/Emoji
+      doc.fontSize(24)
+         .fillColor(borderColor)
+         .text(iconText, 70, cardY + 20);
+      
+      // Título
+      doc.fontSize(12)
+         .fillColor(COLORS.gray)
+         .font('Helvetica')
+         .text(title, 110, cardY + 15);
+      
+      // Contenido
+      doc.fontSize(22)
+         .fillColor(COLORS.dark)
+         .font('Helvetica-Bold')
+         .text(content, 110, cardY + 32);
+      
+      yPosition += cardHeight + 15;
+    };
+
+    // ─── TARJETAS DE RESUMEN GENERAL ──────────────────────────────────────────
+    doc.fontSize(14)
+       .fillColor(COLORS.primary)
+       .font('Helvetica-Bold')
+       .text('Resumen General', 50, yPosition);
+    
+    yPosition += 25;
+
+    // Primera fila de tarjetas
+    const cardWidth = 120;
+    const cardSpacing = 15;
+    const startX = 50;
+
+    // Tarjeta Estudiantes
+    doc.rect(startX, yPosition, cardWidth, 55).fill('#E3F2FD').stroke('#1565C0');
+    doc.rect(startX, yPosition, cardWidth, 55).fill('#1565C0');
+    doc.fontSize(10).fillColor(COLORS.white).font('Helvetica').text('ESTUDIANTES', startX, yPosition + 10, { width: cardWidth, align: 'center' });
+    doc.fontSize(24).fillColor(COLORS.white).font('Helvetica-Bold').text(`${generalData.totalEstudiantes}`, startX, yPosition + 25, { width: cardWidth, align: 'center' });
+
+    // Tarjeta Docentes
+    doc.rect(startX + cardWidth + cardSpacing, yPosition, cardWidth, 55).fill('#E8F5E9').stroke('#2E7D32');
+    doc.rect(startX + cardWidth + cardSpacing, yPosition, cardWidth, 55).fill('#2E7D32');
+    doc.fontSize(10).fillColor(COLORS.white).font('Helvetica').text('DOCENTES', startX + cardWidth + cardSpacing, yPosition + 10, { width: cardWidth, align: 'center' });
+    doc.fontSize(24).fillColor(COLORS.white).font('Helvetica-Bold').text(`${generalData.totalDocentes}`, startX + cardWidth + cardSpacing, yPosition + 25, { width: cardWidth, align: 'center' });
+
+    // Tarjeta Grupos
+    doc.rect(startX + (cardWidth + cardSpacing) * 2, yPosition, cardWidth, 55).fill('#F3E5F5').stroke('#7B1FA2');
+    doc.rect(startX + (cardWidth + cardSpacing) * 2, yPosition, cardWidth, 55).fill('#7B1FA2');
+    doc.fontSize(10).fillColor(COLORS.white).font('Helvetica').text('GRUPOS', startX + (cardWidth + cardSpacing) * 2, yPosition + 10, { width: cardWidth, align: 'center' });
+    doc.fontSize(24).fillColor(COLORS.white).font('Helvetica-Bold').text(`${generalData.totalGrupos}`, startX + (cardWidth + cardSpacing) * 2, yPosition + 25, { width: cardWidth, align: 'center' });
+
+    // Tarjeta Tareas
+    doc.rect(startX + (cardWidth + cardSpacing) * 3, yPosition, cardWidth, 55).fill('#FFF8E1').stroke('#F57F17');
+    doc.rect(startX + (cardWidth + cardSpacing) * 3, yPosition, cardWidth, 55).fill('#F57F17');
+    doc.fontSize(10).fillColor(COLORS.white).font('Helvetica').text('TAREAS', startX + (cardWidth + cardSpacing) * 3, yPosition + 10, { width: cardWidth, align: 'center' });
+    doc.fontSize(24).fillColor(COLORS.white).font('Helvetica-Bold').text(`${generalData.totalTareas}`, startX + (cardWidth + cardSpacing) * 3, yPosition + 25, { width: cardWidth, align: 'center' });
+
+    yPosition += 80;
+
+    // ─── DISTRIBUCION DE RENDIMIENTO ──────────────────────────────────────────
+    doc.fontSize(14)
+       .fillColor(COLORS.primary)
+       .font('Helvetica-Bold')
+       .text('Distribucion de Rendimiento', 50, yPosition);
+    
+    yPosition += 25;
+
+    // Tabla de rendimiento con barras visuales
+    const barWidth = 350;
+    const barHeight = 25;
+    const total = rendimientoData.total || 1;
+
+    // Alto rendimiento
+    doc.fontSize(11).fillColor(COLORS.dark).font('Helvetica').text('Alto rendimiento (80-100%)', 50, yPosition);
+    doc.rect(50, yPosition + 15, barWidth, barHeight).fill('#E8F5E9');
+    doc.rect(50, yPosition + 15, (rendimientoData.alto / total) * barWidth, barHeight).fill(COLORS.success);
+    doc.fontSize(12).fillColor(COLORS.white).font('Helvetica-Bold').text(`${rendimientoData.alto}`, 55, yPosition + 20);
+    doc.fontSize(11).fillColor(COLORS.gray).font('Helvetica').text(`${Math.round((rendimientoData.alto / total) * 100)}%`, 410, yPosition + 20);
+    yPosition += 45;
+
+    // Rendimiento medio
+    doc.fontSize(11).fillColor(COLORS.dark).font('Helvetica').text('Rendimiento medio (60-79%)', 50, yPosition);
+    doc.rect(50, yPosition + 15, barWidth, barHeight).fill('#FFF8E1');
+    doc.rect(50, yPosition + 15, (rendimientoData.medio / total) * barWidth, barHeight).fill(COLORS.warning);
+    doc.fontSize(12).fillColor(COLORS.white).font('Helvetica-Bold').text(`${rendimientoData.medio}`, 55, yPosition + 20);
+    doc.fontSize(11).fillColor(COLORS.gray).font('Helvetica').text(`${Math.round((rendimientoData.medio / total) * 100)}%`, 410, yPosition + 20);
+    yPosition += 45;
+
+    // Bajo rendimiento
+    doc.fontSize(11).fillColor(COLORS.dark).font('Helvetica').text('Bajo rendimiento (0-59%)', 50, yPosition);
+    doc.rect(50, yPosition + 15, barWidth, barHeight).fill('#FFEBEE');
+    doc.rect(50, yPosition + 15, (rendimientoData.bajo / total) * barWidth, barHeight).fill(COLORS.error);
+    doc.fontSize(12).fillColor(COLORS.white).font('Helvetica-Bold').text(`${rendimientoData.bajo}`, 55, yPosition + 20);
+    doc.fontSize(11).fillColor(COLORS.gray).font('Helvetica').text(`${Math.round((rendimientoData.bajo / total) * 100)}%`, 410, yPosition + 20);
+    yPosition += 55;
+
+    // ─── USO DE MODULOS ───────────────────────────────────────────────────────
+    doc.fontSize(14)
+       .fillColor(COLORS.primary)
+       .font('Helvetica-Bold')
+       .text('Uso de Modulos', 50, yPosition);
+    
+    yPosition += 25;
+
+    // Gráfico de dona simulado con círculos
+    const centerX = 150;
+    const centerY = yPosition + 60;
+    const radius = 50;
+
+    const modulos = [
+      { nombre: 'Lectura', valor: modulosData.lectura, color: COLORS.secondary },
+      { nombre: 'Escritura', valor: modulosData.escritura, color: COLORS.error },
+      { nombre: 'IA', valor: modulosData.ia, color: COLORS.accent },
+    ];
+
+    // Leyenda con datos
+    modulos.forEach((mod, i) => {
+      const porcentaje = modulosData.total > 0 ? Math.round((mod.valor / modulosData.total) * 100) : 0;
+      
+      // Círculo de color
+      doc.circle(60, yPosition + 10 + (i * 30), 6).fill(mod.color);
+      
+      // Nombre y valor
+      doc.fontSize(11).fillColor(COLORS.dark).font('Helvetica-Bold').text(mod.nombre, 75, yPosition + 5 + (i * 30));
+      doc.fontSize(10).fillColor(COLORS.gray).font('Helvetica').text(`${mod.valor} ejercicios (${porcentaje}%)`, 150, yPosition + 6 + (i * 30));
     });
-    doc.moveDown(1.5);
 
-    // ─── Resumen de Alertas ───────────────────────────────────────────────────
-    doc.fontSize(16).fillColor('#212121').text('Resumen de Alertas del Mes', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#424242');
-    doc.text(`• Errores detectados: ${alertasData.error}`);
-    doc.text(`• Logros registrados: ${alertasData.logro + alertasData.alto_rendimiento}`);
-    doc.text(`• Inactividades: ${alertasData.inactividad}`);
-    doc.text(`• Mejoras notables: ${alertasData.mejora}`);
-    doc.moveDown(2);
+    // Total
+    doc.fontSize(12).fillColor(COLORS.primary).font('Helvetica-Bold').text(`Total: ${modulosData.total} ejercicios`, 60, yPosition + 100);
 
-    // ─── Pie de página ────────────────────────────────────────────────────────
-    doc.fontSize(9).fillColor('#9E9E9E').text(
-      'Este reporte fue generado automáticamente por el sistema de Lectoescritura.',
-      50,
-      doc.page.height - 50,
-      { align: 'center' }
-    );
+    // Resumen visual de progreso mensual al lado
+    yPosition += 130;
+
+    // ─── PROGRESO MENSUAL ─────────────────────────────────────────────────────
+    doc.fontSize(14)
+       .fillColor(COLORS.primary)
+       .font('Helvetica-Bold')
+       .text('Progreso Mensual', 50, yPosition);
+    
+    yPosition += 25;
+
+    // Tabla de progreso
+    const tableWidth = 400;
+    const colWidth = tableWidth / 4;
+
+    // Encabezado de tabla
+    doc.rect(50, yPosition, tableWidth, 25).fill(COLORS.primary);
+    progresoData.forEach((mes, i) => {
+      doc.fontSize(10).fillColor(COLORS.white).font('Helvetica-Bold')
+         .text(mes.mes.charAt(0).toUpperCase() + mes.mes.slice(1), 50 + (i * colWidth), yPosition + 8, { width: colWidth, align: 'center' });
+    });
+    yPosition += 25;
+
+    // Fila de datos
+    doc.rect(50, yPosition, tableWidth, 30).fill(COLORS.bgLight);
+    progresoData.forEach((mes, i) => {
+      const color = mes.promedio >= 70 ? COLORS.success : mes.promedio >= 50 ? COLORS.warning : COLORS.error;
+      doc.fontSize(18).fillColor(color).font('Helvetica-Bold')
+         .text(`${mes.promedio}%`, 50 + (i * colWidth), yPosition + 5, { width: colWidth, align: 'center' });
+    });
+    yPosition += 50;
+
+    // ─── RESUMEN DE ALERTAS ───────────────────────────────────────────────────
+    doc.fontSize(14)
+       .fillColor(COLORS.primary)
+       .font('Helvetica-Bold')
+       .text('Resumen de Alertas del Mes', 50, yPosition);
+    
+    yPosition += 25;
+
+    const alertas = [
+      { label: 'Errores detectados', valor: alertasData.error, color: COLORS.error },
+      { label: 'Logros registrados', valor: alertasData.logro + alertasData.alto_rendimiento, color: COLORS.success },
+      { label: 'Inactividades', valor: alertasData.inactividad, color: COLORS.warning },
+      { label: 'Mejoras notables', valor: alertasData.mejora, color: COLORS.secondary },
+    ];
+
+    // Tarjetas pequeñas de alertas
+    alertas.forEach((alerta, i) => {
+      const x = 50 + (i % 2) * 210;
+      const y = yPosition + Math.floor(i / 2) * 50;
+      
+      doc.rect(x, y, 200, 40).fill('#FAFAFA').stroke(alerta.color);
+      doc.rect(x, y, 4, 40).fill(alerta.color);
+      
+      // Indicador de color en lugar de emoji
+      doc.rect(x + 10, y + 12, 12, 12).fill(alerta.color);
+      doc.fontSize(10).fillColor(COLORS.gray).font('Helvetica').text(alerta.label, x + 35, y + 8);
+      doc.fontSize(18).fillColor(alerta.color).font('Helvetica-Bold').text(`${alerta.valor}`, x + 35, y + 20);
+    });
+
+    // ─── PIE DE PÁGINA ────────────────────────────────────────────────────────
+    doc.rect(0, doc.page.height - 50, doc.page.width, 50).fill(COLORS.primary);
+    doc.fontSize(9)
+       .fillColor('#B3E5FC')
+       .font('Helvetica')
+       .text(
+         'Este reporte fue generado automáticamente por el sistema de Lectoescritura.',
+         50,
+         doc.page.height - 35,
+         { align: 'center' }
+       );
 
     // Finalizar el PDF
     doc.end();
