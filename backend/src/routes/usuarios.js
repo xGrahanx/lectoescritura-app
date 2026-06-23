@@ -260,5 +260,85 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ─── PUT /api/usuarios/:id/perfil ────────────────────────────────────────────
+// Edita solo nombre y apellido del perfil del usuario actual (no permite cambiar correo)
+router.put('/:id/perfil', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { nombre, apellido } = req.body;
+
+  if (isNaN(id)) {
+    return res.status(400).json({ mensaje: 'ID inválido' });
+  }
+
+  // Validaciones básicas
+  if (!nombre || !apellido) {
+    return res.status(400).json({ mensaje: 'Nombre y apellido son requeridos' });
+  }
+
+  const regexNombre = /^[a-zA-Z\s]{2,50}$/;
+  if (!regexNombre.test(nombre.trim())) {
+    return res.status(400).json({ 
+      mensaje: 'El nombre solo puede contener letras y debe tener al menos 2 caracteres' 
+    });
+  }
+  if (!regexNombre.test(apellido.trim())) {
+    return res.status(400).json({ 
+      mensaje: 'El apellido solo puede contener letras y debe tener al menos 2 caracteres' 
+    });
+  }
+
+  try {
+    // Verificar que el usuario existe y está activo
+    const usuarioExistente = await prisma.usuario.findUnique({ 
+      where: { id, activo: true } 
+    });
+
+    if (!usuarioExistente) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado o inactivo' });
+    }
+
+    // Actualizar solo nombre y apellido
+    const usuarioActualizado = await prisma.usuario.update({
+      where: { id },
+      data: {
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+      },
+      select: { 
+        id: true, nombre: true, apellido: true, 
+        correo: true, rol: true, grado: true 
+      },
+    });
+
+    // Registrar auditoría
+    await prisma.auditoria.create({
+      data: {
+        usuario: {
+          connect: { id }
+        },
+        tabla: 'usuarios',
+        operacion: 'UPDATE',
+        datos_anteriores: { 
+          nombre: usuarioExistente.nombre,
+          apellido: usuarioExistente.apellido 
+        },
+        datos_nuevos: { 
+          nombre: nombre.trim(),
+          apellido: apellido.trim() 
+        },
+      },
+    });
+
+    res.json({ 
+      mensaje: 'Perfil actualizado correctamente', 
+      usuario: usuarioActualizado 
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;
 

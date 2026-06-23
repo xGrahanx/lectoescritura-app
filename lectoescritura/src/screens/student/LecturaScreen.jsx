@@ -78,7 +78,7 @@ const LecturaScreen = ({ navigation }) => {
     <View style={styles.contenedor}>
       <View style={styles.encabezado}>
         <View style={styles.tituloRow}>
-          <MaterialCommunityIcons name="book-open-variant" size={26} color="#1A237E" />
+          <MaterialCommunityIcons name="book-open" size={26} color="#1A237E" />
           <Text style={styles.titulo}> Lectura</Text>
         </View>
         <Text style={styles.subtitulo}>Selecciona un texto para practicar</Text>

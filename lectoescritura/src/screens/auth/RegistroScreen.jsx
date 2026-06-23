@@ -1,15 +1,15 @@
 ﻿/**
- * RegistroScreen.jsx - Pantalla de registro de nuevos usuarios
+ * RegistroScreen.jsx - Pantalla de registro de nuevos estudiantes
  *
- * Permite crear cuentas de estudiante o docente.
- * Los administradores solo pueden ser creados desde el panel admin.
+ * SEGURIDAD: Solo permite crear cuentas de estudiante.
+ * Los docentes y administradores deben ser creados por un administrador.
  *
  * Validaciones de seguridad:
  * - Nombre y apellido: solo letras, minimo 2 caracteres
  * - Correo: formato valido
  * - Password: minimo 8 caracteres, al menos 1 mayuscula y 1 numero
  * - Confirmacion de password
- * - Grado requerido para estudiantes
+ * - Grado requerido
  */
 
 import React, { useState } from 'react';
@@ -33,7 +33,6 @@ const RegistroScreen = ({ navigation }) => {
   const [correo, setCorreo]                   = useState('');
   const [password, setPassword]               = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
-  const [rol, setRol]                         = useState('estudiante');
   const [grado, setGrado]                     = useState('');
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [cargando, setCargando]               = useState(false);
@@ -45,32 +44,28 @@ const RegistroScreen = ({ navigation }) => {
 
   // Validacion completa en el cliente antes de enviar al backend
   const validar = () => {
-    if (!nombre.trim() || !apellido.trim() || !correo.trim() || !password || !confirmarPassword) {
+    if (!nombre.trim() || !apellido.trim() || !correo.trim() || !password || !confirmarPassword || !grado.trim()) {
       Alert.alert('Campos requeridos', 'Por favor completa todos los campos.');
       return false;
     }
     if (!REGEX_NOMBRE.test(nombre.trim())) {
-      Alert.alert('Nombre invalido', 'El nombre solo puede contener letras y debe tener al menos 2 caracteres.');
+      Alert.alert('Nombre inválido', 'El nombre solo puede contener letras y debe tener al menos 2 caracteres.');
       return false;
     }
     if (!REGEX_NOMBRE.test(apellido.trim())) {
-      Alert.alert('Apellido invalido', 'El apellido solo puede contener letras y debe tener al menos 2 caracteres.');
+      Alert.alert('Apellido inválido', 'El apellido solo puede contener letras y debe tener al menos 2 caracteres.');
       return false;
     }
     if (!REGEX_CORREO.test(correo.trim())) {
-      Alert.alert('Correo invalido', 'Ingresa un correo electronico valido.');
+      Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido.');
       return false;
     }
     if (!REGEX_PASSWORD.test(password)) {
-      Alert.alert('Contrasena debil', 'La contrasena debe tener al menos 8 caracteres, una mayuscula y un numero.');
+      Alert.alert('Contraseña débil', 'La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.');
       return false;
     }
     if (password !== confirmarPassword) {
-      Alert.alert('Error', 'Las contrasenas no coinciden.');
-      return false;
-    }
-    if (rol === 'estudiante' && !grado.trim()) {
-      Alert.alert('Grado requerido', 'Ingresa el grado del estudiante.');
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
       return false;
     }
     return true;
@@ -89,15 +84,14 @@ const RegistroScreen = ({ navigation }) => {
           correo:           correo.toLowerCase().trim(),
           password,
           confirmarPassword,
-          rol,
-          grado:            grado.trim() || undefined,
+          grado:            grado.trim(),
         },
         { timeout: API_CONFIG.TIMEOUT }
       );
 
       Alert.alert(
         'Registro exitoso',
-        'Tu cuenta ha sido creada. Ya puedes iniciar sesion.',
+        'Tu cuenta de estudiante ha sido creada. Ya puedes iniciar sesión.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error) {
@@ -115,25 +109,15 @@ const RegistroScreen = ({ navigation }) => {
           <MaterialCommunityIcons name="arrow-left" size={24} color="#424242" />
         </TouchableOpacity>
 
-        <Text style={styles.titulo}>Crear cuenta</Text>
-        <Text style={styles.subtitulo}>Completa tus datos para registrarte</Text>
+        <Text style={styles.titulo}>Registro de Estudiante</Text>
+        <Text style={styles.subtitulo}>Completa tus datos para crear tu cuenta de estudiante</Text>
 
-        {/* Selector de rol */}
-        <View style={styles.selectorRol}>
-          <TouchableOpacity
-            style={[styles.opcionRol, rol === 'estudiante' && styles.opcionRolActiva]}
-            onPress={() => setRol('estudiante')}
-          >
-            <MaterialCommunityIcons name="school" size={20} color={rol === 'estudiante' ? '#FFFFFF' : '#757575'} />
-            <Text style={[styles.textoRol, rol === 'estudiante' && styles.textoRolActivo]}>Estudiante</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.opcionRol, rol === 'docente' && styles.opcionRolActiva]}
-            onPress={() => setRol('docente')}
-          >
-            <MaterialCommunityIcons name="account-tie" size={20} color={rol === 'docente' ? '#FFFFFF' : '#757575'} />
-            <Text style={[styles.textoRol, rol === 'docente' && styles.textoRolActivo]}>Docente</Text>
-          </TouchableOpacity>
+        {/* Información de seguridad */}
+        <View style={styles.infoSeguridad}>
+          <MaterialCommunityIcons name="shield-check" size={18} color="#4CAF50" />
+          <Text style={styles.infoSeguridadTexto}>
+            {' '}Registro seguro - Solo estudiantes pueden registrarse aquí.
+          </Text>
         </View>
 
         <View style={styles.formulario}>
@@ -149,27 +133,23 @@ const RegistroScreen = ({ navigation }) => {
             value={apellido} onChangeText={setApellido} placeholderTextColor="#BDBDBD"
           />
 
-          {rol === 'estudiante' && (
-            <>
-              <Text style={styles.etiqueta}>Grado *</Text>
-              <TextInput
-                style={styles.input} placeholder="Ej: 3er Grado - Seccion A"
-                value={grado} onChangeText={setGrado} placeholderTextColor="#BDBDBD"
-              />
-            </>
-          )}
+          <Text style={styles.etiqueta}>Grado *</Text>
+          <TextInput
+            style={styles.input} placeholder="Ej: 3er Grado - Sección A"
+            value={grado} onChangeText={setGrado} placeholderTextColor="#BDBDBD"
+          />
 
-          <Text style={styles.etiqueta}>Correo electronico *</Text>
+          <Text style={styles.etiqueta}>Correo electrónico *</Text>
           <TextInput
             style={styles.input} placeholder="correo@escuela.edu"
             value={correo} onChangeText={setCorreo}
             keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#BDBDBD"
           />
 
-          <Text style={styles.etiqueta}>Contrasena *</Text>
+          <Text style={styles.etiqueta}>Contraseña *</Text>
           <View style={styles.inputContenedor}>
             <TextInput
-              style={styles.inputPassword} placeholder="Minimo 8 caracteres"
+              style={styles.inputPassword} placeholder="Mínimo 8 caracteres"
               value={password} onChangeText={setPassword}
               secureTextEntry={!mostrarPassword} placeholderTextColor="#BDBDBD"
             />
@@ -183,20 +163,20 @@ const RegistroScreen = ({ navigation }) => {
             <View style={styles.indicadoresPassword}>
               <View style={styles.indicador}>
                 <MaterialCommunityIcons name={passwordTiene8 ? 'check-circle' : 'circle-outline'} size={14} color={passwordTiene8 ? '#4CAF50' : '#BDBDBD'} />
-                <Text style={[styles.textoIndicador, passwordTiene8 && styles.indicadorOk]}>Minimo 8 caracteres</Text>
+                <Text style={[styles.textoIndicador, passwordTiene8 && styles.indicadorOk]}>Mínimo 8 caracteres</Text>
               </View>
               <View style={styles.indicador}>
                 <MaterialCommunityIcons name={passwordTieneMayus ? 'check-circle' : 'circle-outline'} size={14} color={passwordTieneMayus ? '#4CAF50' : '#BDBDBD'} />
-                <Text style={[styles.textoIndicador, passwordTieneMayus && styles.indicadorOk]}>Al menos una mayuscula</Text>
+                <Text style={[styles.textoIndicador, passwordTieneMayus && styles.indicadorOk]}>Al menos una mayúscula</Text>
               </View>
               <View style={styles.indicador}>
                 <MaterialCommunityIcons name={passwordTieneNum ? 'check-circle' : 'circle-outline'} size={14} color={passwordTieneNum ? '#4CAF50' : '#BDBDBD'} />
-                <Text style={[styles.textoIndicador, passwordTieneNum && styles.indicadorOk]}>Al menos un numero</Text>
+                <Text style={[styles.textoIndicador, passwordTieneNum && styles.indicadorOk]}>Al menos un número</Text>
               </View>
             </View>
           )}
 
-          <Text style={styles.etiqueta}>Confirmar contrasena *</Text>
+          <Text style={styles.etiqueta}>Confirmar contraseña *</Text>
           <TextInput
             style={[
               styles.input,
@@ -204,7 +184,7 @@ const RegistroScreen = ({ navigation }) => {
                 borderColor: confirmarPassword === password ? '#4CAF50' : '#F44336',
               },
             ]}
-            placeholder="Repite tu contrasena"
+            placeholder="Repite tu contraseña"
             value={confirmarPassword} onChangeText={setConfirmarPassword}
             secureTextEntry placeholderTextColor="#BDBDBD"
           />
@@ -216,9 +196,18 @@ const RegistroScreen = ({ navigation }) => {
           >
             {cargando
               ? <ActivityIndicator color="#FFFFFF" />
-              : <Text style={styles.botonTexto}>Crear cuenta</Text>
+              : <Text style={styles.botonTexto}>Crear cuenta de estudiante</Text>
             }
           </TouchableOpacity>
+
+          {/* Información sobre docentes */}
+          <View style={styles.infoDocente}>
+            <MaterialCommunityIcons name="information" size={16} color="#757575" />
+            <Text style={styles.infoDocenteTexto}>
+              {' '}Los docentes deben ser registrados por el administrador del sistema.
+              Para más información, contacta con tu profesor o administrador.
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -228,17 +217,24 @@ const RegistroScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   contenedor: { flexGrow: 1, backgroundColor: '#F5F9FF', padding: 24, paddingTop: 50 },
   botonVolver: { marginBottom: 16 },
-  titulo: { fontSize: 26, fontWeight: 'bold', color: '#1A237E', marginBottom: 4 },
-  subtitulo: { fontSize: 14, color: '#757575', marginBottom: 24 },
-  selectorRol: { flexDirection: 'row', marginBottom: 20 },
-  opcionRol: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF', marginRight: 8,
+  titulo: { fontSize: 26, fontWeight: 'bold', color: '#1A237E', marginBottom: 4, textAlign: 'center' },
+  subtitulo: { fontSize: 14, color: '#757575', marginBottom: 20, textAlign: 'center' },
+  infoSeguridad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 12,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
-  opcionRolActiva: { backgroundColor: '#4A90D9', borderColor: '#4A90D9' },
-  textoRol: { fontSize: 14, color: '#757575', fontWeight: '500', marginLeft: 6 },
-  textoRolActivo: { color: '#FFFFFF', fontWeight: 'bold' },
+  infoSeguridadTexto: {
+    fontSize: 13,
+    color: '#2E7D32',
+    flex: 1,
+    lineHeight: 18,
+  },
   formulario: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, elevation: 4 },
   etiqueta: { fontSize: 13, fontWeight: '600', color: '#424242', marginBottom: 4, marginTop: 12 },
   input: {
@@ -261,6 +257,21 @@ const styles = StyleSheet.create({
   },
   botonDeshabilitado: { backgroundColor: '#90CAF9' },
   botonTexto: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  infoDocente: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+  },
+  infoDocenteTexto: {
+    fontSize: 12,
+    color: '#757575',
+    flex: 1,
+    lineHeight: 16,
+    marginLeft: 8,
+  },
 });
 
 export default RegistroScreen;

@@ -14,7 +14,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Proveedores de contexto global
 import { AuthProvider } from './src/context/AuthContext';
-import { OfflineProvider } from './src/context/OfflineContext';
 
 // Navegación principal
 import RootNavigator from './src/navigation/RootNavigator';
@@ -27,14 +26,11 @@ const App = () => {
       <SafeAreaProvider>
         {/* AuthProvider provee el estado de autenticación a toda la app */}
         <AuthProvider>
-          {/* OfflineProvider maneja el estado de conexión y sincronización */}
-          <OfflineProvider>
-            <NavigationContainer>
-              <StatusBar style="dark" backgroundColor="#FFFFFF" />
-              {/* Navegador raíz que decide qué stack mostrar según el rol */}
-              <RootNavigator />
-            </NavigationContainer>
-          </OfflineProvider>
+          <NavigationContainer>
+            <StatusBar style="dark" backgroundColor="#FFFFFF" />
+            {/* Navegador raíz que decide qué stack mostrar según el rol */}
+            <RootNavigator />
+          </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -12,7 +12,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { API_CONFIG } from '../../utils/constantes';
 
-const PerfilDocenteScreen = () => {
+const PerfilDocenteScreen = ({ navigation }) => {
   const { usuario, cerrarSesion } = useAuth();
   const [notifErrores, setNotifErrores]               = useState(true);
   const [notifLogros, setNotifLogros]                 = useState(true);
@@ -93,11 +93,16 @@ const PerfilDocenteScreen = () => {
           <Text style={styles.tituloSeccion}> Cuenta</Text>
         </View>
         {[
-          { icono: 'account-edit', label: 'Editar perfil', color: '#4A90D9' },
-          { icono: 'lock-reset', label: 'Cambiar contrasena', color: '#FF9800' },
-          { icono: 'help-circle', label: 'Ayuda y soporte', color: '#9C27B0' },
+          { icono: 'account-edit', label: 'Editar perfil', color: '#4A90D9', screen: 'EditarPerfil' },
+          { icono: 'lock', label: 'Cambiar contraseña', color: '#FF9800', screen: 'CambiarPassword' },
+          { icono: 'book-open', label: 'Biblioteca offline', color: '#2196F3', screen: 'BibliotecaOffline' },
+          { icono: 'help-circle', label: 'Ayuda y soporte', color: '#9C27B0', screen: 'Ayuda' },
         ].map((item, index) => (
-          <TouchableOpacity key={index} style={styles.opcionCuenta}>
+          <TouchableOpacity 
+            key={index} 
+            style={styles.opcionCuenta} 
+            onPress={() => navigation.navigate(item.screen)}
+          >
             <MaterialCommunityIcons name={item.icono} size={22} color={item.color} />
             <Text style={styles.textoOpcion}>{item.label}</Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#BDBDBD" />

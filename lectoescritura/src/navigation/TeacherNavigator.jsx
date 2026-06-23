@@ -3,6 +3,7 @@
  *
  * Tabs: Dashboard, Mis Estudiantes, Alertas, Perfil
  * El stack de Estudiantes incluye: Lista → Detalle → Asignar Tarea
+ * El stack de Perfil incluye: Perfil → EditarPerfil → CambiarPassword → Ayuda
  */
 
 import React from 'react';
@@ -17,6 +18,10 @@ import AlertasScreen from '../screens/teacher/AlertasScreen';
 import AsignarTareaScreen from '../screens/teacher/AsignarTareaScreen';
 import PerfilDocenteScreen from '../screens/teacher/PerfilDocenteScreen';
 import AsistenteIAScreen from '../screens/teacher/AsistenteIAScreen';
+import EditarPerfilScreen from '../screens/teacher/EditarPerfilScreen';
+import CambiarPasswordScreen from '../screens/teacher/CambiarPasswordScreen';
+import AyudaScreen from '../screens/teacher/AyudaScreen';
+import BibliotecaOfflineScreen from '../screens/teacher/BibliotecaOfflineScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -27,6 +32,17 @@ const EstudiantesStack = () => (
     <Stack.Screen name="ListaEstudiantes" component={EstudiantesScreen} />
     <Stack.Screen name="DetalleEstudiante" component={DetalleEstudianteScreen} />
     <Stack.Screen name="AsignarTarea" component={AsignarTareaScreen} />
+  </Stack.Navigator>
+);
+
+// Stack para el módulo de perfil (perfil + editar + cambiar password + ayuda + biblioteca)
+const PerfilStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="PerfilPrincipal" component={PerfilDocenteScreen} />
+    <Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
+    <Stack.Screen name="CambiarPassword" component={CambiarPasswordScreen} />
+    <Stack.Screen name="Ayuda" component={AyudaScreen} />
+    <Stack.Screen name="BibliotecaOffline" component={BibliotecaOfflineScreen} />
   </Stack.Navigator>
 );
 
@@ -60,7 +76,7 @@ const TeacherNavigator = () => {
       <Tab.Screen name="Estudiantes" component={EstudiantesStack} options={{ tabBarLabel: 'Estudiantes' }} />
       <Tab.Screen name="AsistenteIA" component={AsistenteIAScreen} options={{ tabBarLabel: 'IA' }} />
       <Tab.Screen name="Alertas" component={AlertasScreen} options={{ tabBarLabel: 'Alertas' }} />
-      <Tab.Screen name="Perfil" component={PerfilDocenteScreen} options={{ tabBarLabel: 'Perfil' }} />
+      <Tab.Screen name="Perfil" component={PerfilStack} options={{ tabBarLabel: 'Perfil' }} />
     </Tab.Navigator>
   );
 };

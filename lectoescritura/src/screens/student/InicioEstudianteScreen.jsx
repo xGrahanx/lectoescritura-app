@@ -12,7 +12,6 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { useOffline } from '../../context/OfflineContext';
 import { API_CONFIG } from '../../utils/constantes';
 
 const ACCESO_RAPIDO = [

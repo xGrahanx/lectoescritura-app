@@ -22,6 +22,7 @@ import EjercicioEscrituraScreen from '../screens/student/EjercicioEscrituraScree
 import EjerciciosIAScreen from '../screens/student/EjerciciosIAScreen';
 import ProgresoScreen from '../screens/student/ProgresoScreen';
 import TareasScreen from '../screens/student/TareasScreen';
+import CuentosOfflineScreen from '../screens/student/CuentosOfflineScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -49,6 +50,7 @@ const TareasStack = () => (
     <Stack.Screen name="EjercicioEscrituraTarea" component={EjercicioEscrituraScreen} />
     <Stack.Screen name="EjercicioLecturaTarea" component={EjercicioLecturaScreen} />
     <Stack.Screen name="EjercicioIATarea" component={EjerciciosIAScreen} />
+    <Stack.Screen name="CuentosOffline" component={CuentosOfflineScreen} />
   </Stack.Navigator>
 );
 

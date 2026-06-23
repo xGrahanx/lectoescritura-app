@@ -118,19 +118,21 @@ const AsignarTareaScreen = ({ route, navigation }) => {
 
     const descripcion = seleccionado?.descripcion || seleccionado?.contenido || `Realiza el ejercicio de ${tipoTarea} asignado.`;
 
+    const tareaData = {
+      titulo,
+      descripcion,
+      tipo: tipoTarea,
+      docenteId:    usuario.id,
+      estudianteId: estudiante.id,
+      fecha_limite: fechaParseada,
+      es_avanzada:  esAvanzada,
+      texto_id:     tipoTarea === 'lectura'   ? seleccionado?.id : null,
+      ejercicio_id: tipoTarea === 'escritura' ? seleccionado?.id : null,
+    };
+
     setAsignando(true);
     try {
-      await axios.post(`${API_CONFIG.BASE_URL}/tareas`, {
-        titulo,
-        descripcion,
-        tipo: tipoTarea,
-        docenteId:    usuario.id,
-        estudianteId: estudiante.id,
-        fecha_limite: fechaParseada,
-        es_avanzada:  esAvanzada,
-        texto_id:     tipoTarea === 'lectura'   ? seleccionado?.id : null,
-        ejercicio_id: tipoTarea === 'escritura' ? seleccionado?.id : null,
-      }, { timeout: API_CONFIG.TIMEOUT });
+      await axios.post(`${API_CONFIG.BASE_URL}/tareas`, tareaData, { timeout: API_CONFIG.TIMEOUT });
 
       Alert.alert(
         '✅ Tarea asignada',

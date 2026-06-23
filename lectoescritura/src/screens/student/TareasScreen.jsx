@@ -4,11 +4,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../../utils/constantes';
 import { useAuth } from '../../context/AuthContext';
 
@@ -18,6 +19,7 @@ const TareasScreen = ({ navigation }) => {
   const [filtro, setFiltro]       = useState('todas');
   const [cargando, setCargando]   = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [cuentosOffline, setCuentosOffline] = useState(0);
 
   const cargarTareas = useCallback(async () => {
     try {
@@ -26,6 +28,15 @@ const TareasScreen = ({ navigation }) => {
         { timeout: API_CONFIG.TIMEOUT }
       );
       setTareas(data);
+      
+      // Cargar cantidad de cuentos offline
+      try {
+        const cuentosJson = await AsyncStorage.getItem('@lectoescritura:biblioteca_offline');
+        const cuentos = cuentosJson ? JSON.parse(cuentosJson) : [];
+        setCuentosOffline(cuentos.length);
+      } catch (error) {
+        console.log('No hay cuentos offline o error cargándolos');
+      }
     } catch (error) {
       Alert.alert('Error', 'No se pudieron cargar las tareas. Verifica tu conexión.');
     } finally {
@@ -153,11 +164,33 @@ const TareasScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.contenedor}>
+    <ScrollView style={styles.contenedor} showsVerticalScrollIndicator={false}>
       <View style={styles.encabezado}>
         <Text style={styles.titulo}>Mis Tareas</Text>
         <Text style={styles.subtitulo}>Tareas asignadas por tu docente</Text>
       </View>
+
+      {/* Sección especial: Cuentos Offline */}
+      {cuentosOffline > 0 && (
+        <TouchableOpacity
+          style={styles.cuentosOfflineCard}
+          onPress={() => navigation.navigate('CuentosOffline')}
+        >
+          <View style={styles.cuentosOfflineHeader}>
+            <MaterialCommunityIcons name="book-off" size={24} color="#4CAF50" />
+            <View style={styles.cuentosOfflineInfo}>
+              <Text style={styles.cuentosOfflineTitulo}>Cuentos disponibles offline</Text>
+              <Text style={styles.cuentosOfflineDescripcion}>
+                {cuentosOffline} cuentos que puedes leer sin internet
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#BDBDBD" />
+          </View>
+          <Text style={styles.cuentosOfflineAccion}>
+            Toca para leer cuentos disponibles sin conexión
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.filtros}>
         {['todas', 'pendiente', 'completada', 'vencida'].map(f => (
@@ -173,20 +206,19 @@ const TareasScreen = ({ navigation }) => {
         ))}
       </View>
 
-      <FlatList
-        data={tareasFiltradas}
-        renderItem={renderTarea}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.lista}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefrescar} />}
-        ListEmptyComponent={
-          <View style={styles.sinTareas}>
-            <MaterialCommunityIcons name="check-all" size={40} color="#4CAF50" />
-            <Text style={styles.textoSinTareas}>No hay tareas en esta categoría</Text>
+      {tareasFiltradas.length === 0 ? (
+        <View style={styles.sinTareas}>
+          <MaterialCommunityIcons name="check-all" size={40} color="#4CAF50" />
+          <Text style={styles.textoSinTareas}>No hay tareas en esta categoría</Text>
+        </View>
+      ) : (
+        tareasFiltradas.map((item) => (
+          <View key={item.id.toString()} style={styles.lista}>
+            {renderTarea({ item })}
           </View>
-        }
-      />
-    </View>
+        ))
+      )}
+    </ScrollView>
   );
 };
 
@@ -197,6 +229,46 @@ const styles = StyleSheet.create({
   encabezado: { backgroundColor: '#FFFFFF', padding: 20, paddingTop: 50 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#1A237E' },
   subtitulo: { fontSize: 13, color: '#757575', marginTop: 2 },
+  
+  // Estilos para sección de cuentos offline
+  cuentosOfflineCard: {
+    backgroundColor: '#E8F5E9',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  cuentosOfflineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cuentosOfflineInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  cuentosOfflineTitulo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 4,
+  },
+  cuentosOfflineDescripcion: {
+    fontSize: 13,
+    color: '#4CAF50',
+  },
+  cuentosOfflineAccion: {
+    fontSize: 12,
+    color: '#689F38',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#C8E6C9',
+  },
   filtros: { flexDirection: 'row', padding: 16, flexWrap: 'wrap' },
   botonFiltro: {
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
