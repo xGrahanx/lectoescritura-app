@@ -254,7 +254,7 @@ const generarPlantillaRecuperacion = (username, code) => {
     <div class="container">
         <div class="header">
             <h1>Sistema de Lectoescritura</h1>
-            <p>Escuela Nacional José Gabriel Alviares</p>
+            <p>Escuela Nacional Jose Alvares de lugo</p>
         </div>
         
         <div class="content">
@@ -307,7 +307,7 @@ const generarPlantillaRecuperacion = (username, code) => {
         
         <div class="footer">
             <div class="footer-text">© ${new Date().getFullYear()} Sistema de Lectoescritura</div>
-            <div class="footer-text">Escuela Nacional José Gabriel Alviares</div>
+            <div class="footer-text">Escuela Nacional Jose Alvares de lugo</div>
             <div class="footer-text">Este es un correo automático del sistema</div>
             <div class="timestamp">Solicitud realizada el ${fecha}</div>
         </div>
@@ -333,7 +333,7 @@ const enviarCorreoRecuperacion = async (to, code, username) => {
     to: to,
     subject: 'Recuperación de Contraseña - Sistema de Lectoescritura',
     html: generarPlantillaRecuperacion(username, code),
-    text: `Hola ${username},\n\nHemos recibido una solicitud para restablecer tu contraseña.\n\nTu código de verificación es: ${code}\n\nVálido por 15 minutos.\n\nNo compartas este código con nadie.\n\nSi no solicitaste este cambio, ignora este mensaje.\n\nSaludos,\nSistema de Lectoescritura\nEscuela Nacional José Gabriel Alviares`,
+    text: `Hola ${username},\n\nHemos recibido una solicitud para restablecer tu contraseña.\n\nTu código de verificación es: ${code}\n\nVálido por 15 minutos.\n\nNo compartas este código con nadie.\n\nSi no solicitaste este cambio, ignora este mensaje.\n\nSaludos,\nSistema de Lectoescritura\nEscuela Nacional Jose Alvares de lugo`,
   };
 
   try {
@@ -470,12 +470,12 @@ const enviarCorreoBienvenida = async (to, username, rol) => {
         </div>
         <p>Si tienes preguntas o necesitas ayuda, contacta a tu docente o administrador.</p>
         <div class="footer">
-            <p>© ${new Date().getFullYear()} Sistema de Lectoescritura - Escuela Nacional José Gabriel Alviares</p>
+            <p>© ${new Date().getFullYear()} Sistema de Lectoescritura - Escuela Nacional Jose Alvares de lugo</p>
         </div>
     </div>
 </body>
 </html>`,
-    text: `¡Bienvenido ${username}!\n\nTu cuenta de ${rol} ha sido creada exitosamente en el Sistema de Lectoescritura.\n\nPara comenzar:\n1. Ve a la aplicación o sitio web\n2. Inicia sesión con tu correo y contraseña\n3. Explora los módulos disponibles\n4. Completa tus primeras actividades\n\nSi tienes preguntas, contacta a tu docente o administrador.\n\nSaludos,\nSistema de Lectoescritura\nEscuela Nacional José Gabriel Alviares`,
+    text: `¡Bienvenido ${username}!\n\nTu cuenta de ${rol} ha sido creada exitosamente en el Sistema de Lectoescritura.\n\nPara comenzar:\n1. Ve a la aplicación o sitio web\n2. Inicia sesión con tu correo y contraseña\n3. Explora los módulos disponibles\n4. Completa tus primeras actividades\n\nSi tienes preguntas, contacta a tu docente o administrador.\n\nSaludos,\nSistema de Lectoescritura\nEscuela Nacional Jose Alvares de lugo`,
   };
 
   try {

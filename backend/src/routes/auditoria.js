@@ -159,9 +159,10 @@ router.get('/pdf', async (req, res) => {
       resultados_escritura: 'Resultados Escritura',
       ejercicios_ia: 'Ejercicios IA',
       progreso_diario: 'Progreso Diario',
-      textos: 'Textos',
+      textos: 'Textos (Biblioteca)',
       ejercicios_escritura: 'Ejercicios Escritura',
       configuracion_sistema: 'Configuración',
+      codigos_recuperacion: 'Códigos Recuperación',
     };
 
     const OPERACIONES_LABELS = {
@@ -182,7 +183,7 @@ router.get('/pdf', async (req, res) => {
     doc.fontSize(11)
        .fillColor('#B3E5FC')
        .font('Helvetica')
-       .text('Escuela Nacional Jose Gabriel Alviares', 50, 55, { align: 'center' });
+       .text('Escuela Nacional Jose Alvares de lugo', 50, 55, { align: 'center' });
 
     doc.fontSize(10)
        .fillColor(COLORS.gray)
@@ -318,10 +319,23 @@ router.get('/pdf', async (req, res) => {
       const datos = registro.datos_nuevos || registro.datos_anteriores;
       if (!datos) return '-';
       switch (registro.tabla) {
-        case 'usuarios': return datos.nombre ? `${datos.nombre} ${datos.apellido || ''}` : '-';
+        case 'usuarios': 
+          if (datos.tipo_registro === 'publico') {
+            return `${datos.nombre} ${datos.apellido || ''} (Registro público)`;
+          }
+          return datos.nombre ? `${datos.nombre} ${datos.apellido || ''}` : '-';
         case 'tareas': return datos.titulo ? `"${datos.titulo}"` : '-';
         case 'grupos': return datos.nombre ? `"${datos.nombre}"` : '-';
-        case 'textos': return datos.titulo ? `"${datos.titulo}"` : '-';
+        case 'textos': 
+          if (datos.titulo) {
+            let resumen = `"${datos.titulo}"`;
+            if (datos.grado) resumen += ` (${datos.grado})`;
+            if (datos.categoria) resumen += ` - ${datos.categoria}`;
+            return resumen;
+          }
+          return '-';
+        case 'codigos_recuperacion':
+          return datos.codigo ? `Código: ${datos.codigo}` : '-';
         default: return '-';
       }
     };

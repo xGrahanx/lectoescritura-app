@@ -12,18 +12,24 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, FlatList,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BIBLIOTECA_KEY = '@lectoescritura:biblioteca_offline';
+import { useAuth } from '../../context/AuthContext';
+import {
+  obtenerBiblioteca,
+  agregarCuentoOffline,
+  eliminarCuentoOffline,
+  obtenerEstadisticasBiblioteca,
+} from '../../services/bibliotecaService';
 
 const BibliotecaOfflineScreen = ({ navigation }) => {
+  const { usuario } = useAuth();
   const [cuentos, setCuentos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [filtroGrado, setFiltroGrado] = useState('Todos');
   const [filtroNivel, setFiltroNivel] = useState('Todos');
+  const [cargando, setCargando] = useState(false);
   
   // Formulario para nuevo cuento
   const [titulo, setTitulo] = useState('');
@@ -40,12 +46,14 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
 
   const cargarCuentos = async () => {
     try {
-      const cuentosJson = await AsyncStorage.getItem(BIBLIOTECA_KEY);
-      const cuentosCargados = cuentosJson ? JSON.parse(cuentosJson) : [];
+      setCargando(true);
+      const cuentosCargados = await obtenerBiblioteca();
       setCuentos(cuentosCargados);
     } catch (error) {
       console.error('Error cargando cuentos:', error);
       Alert.alert('Error', 'No se pudieron cargar los cuentos');
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -62,42 +70,46 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
     }
 
     try {
-      const nuevoCuento = {
-        id: `cuento_${Date.now()}`,
-        titulo: titulo.trim(),
-        contenido: contenido.trim(),
-        grado,
-        categoria,
-        nivel,
-        autor: autor.trim() || 'Anónimo',
-        fecha_agregado: new Date().toISOString(),
-        caracteres: contenido.length,
-        palabras: contenido.split(/\s+/).length,
-      };
-
-      const nuevaBiblioteca = [...cuentos, nuevoCuento];
-      await AsyncStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(nuevaBiblioteca));
-      
-      setCuentos(nuevaBiblioteca);
-      
-      // Limpiar formulario
-      setTitulo('');
-      setContenido('');
-      setGrado('1ro');
-      setCategoria('Cuento');
-      setNivel('Básico');
-      setAutor('');
-      
-      setModalVisible(false);
-      
-      Alert.alert(
-        '✅ Cuento guardado',
-        `"${nuevoCuento.titulo}" se agregó a la biblioteca offline.`,
-        [{ text: 'OK' }]
+      setCargando(true);
+      const resultado = await agregarCuentoOffline(
+        {
+          titulo: titulo.trim(),
+          contenido: contenido.trim(),
+          grado,
+          categoria,
+          nivel,
+          autor: autor.trim() || 'Anónimo',
+        },
+        usuario?.id
       );
+      
+      if (resultado.success) {
+        // Recargar biblioteca
+        await cargarCuentos();
+        
+        // Limpiar formulario
+        setTitulo('');
+        setContenido('');
+        setGrado('1ro');
+        setCategoria('Cuento');
+        setNivel('Básico');
+        setAutor('');
+        
+        setModalVisible(false);
+        
+        Alert.alert(
+          '✅ Cuento guardado',
+          `"${resultado.cuento.titulo}" se agregó a la biblioteca.${resultado.offline ? ' (Guardado localmente)' : ''}`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', resultado.message);
+      }
     } catch (error) {
       console.error('Error guardando cuento:', error);
       Alert.alert('Error', 'No se pudo guardar el cuento');
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -112,10 +124,13 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const nuevaBiblioteca = cuentos.filter(c => c.id !== cuentoId);
-              await AsyncStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(nuevaBiblioteca));
-              setCuentos(nuevaBiblioteca);
-              Alert.alert('✅ Cuento eliminado', 'El cuento fue removido de la biblioteca offline');
+              const resultado = await eliminarCuentoOffline(cuentoId);
+              if (resultado.success) {
+                await cargarCuentos();
+                Alert.alert('✅ Cuento eliminado', 'El cuento fue removido de la biblioteca offline');
+              } else {
+                Alert.alert('Error', resultado.message);
+              }
             } catch (error) {
               console.error('Error eliminando cuento:', error);
               Alert.alert('Error', 'No se pudo eliminar el cuento');
@@ -155,21 +170,24 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
   });
 
   // Opciones de filtro
-  const grados = ['Todos', '1ro', '2do', '3ro', '4to', '5to', '6to', 'General'];
+  const grados = ['Todos', '1ro', '2do', '3ro', 'General'];
   const niveles = ['Todos', 'Básico', 'Intermedio', 'Avanzado'];
   const categorias = ['Cuento', 'Poema', 'Ejercicio', 'Lectura', 'Texto informativo'];
 
-  // Estadísticas
-  const estadisticas = {
-    total: cuentos.length,
-    caracteres: cuentos.reduce((sum, c) => sum + c.caracteres, 0),
-    palabras: cuentos.reduce((sum, c) => sum + c.palabras, 0),
-    porGrado: {},
-  };
 
-  cuentos.forEach(cuento => {
-    estadisticas.porGrado[cuento.grado] = (estadisticas.porGrado[cuento.grado] || 0) + 1;
-  });
+  if (cargando) {
+    return (
+      <View style={styles.contenedor}>
+        <TouchableOpacity style={styles.botonRegresar} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#1A237E" />
+        </TouchableOpacity>
+        <View style={styles.cargandoContainer}>
+          <ActivityIndicator size="large" color="#4A90D9" />
+          <Text style={styles.cargandoTexto}>Cargando biblioteca...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.contenedor}>
@@ -195,13 +213,15 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
         </View>
         <View style={styles.separador} />
         <View style={styles.estadistica}>
-          <Text style={styles.estadisticaNumero}>{estadisticas.palabras.toLocaleString()}</Text>
+          <Text style={styles.estadisticaNumero}>
+            {cuentos.reduce((sum, c) => sum + (c.contenido?.split(/\s+/).length || 0), 0).toLocaleString()}
+          </Text>
           <Text style={styles.estadisticaTexto}>Palabras</Text>
         </View>
         <View style={styles.separador} />
         <View style={styles.estadistica}>
           <Text style={styles.estadisticaNumero}>
-            {Math.round(estadisticas.caracteres / 1000)}K
+            {Math.round(cuentos.reduce((sum, c) => sum + (c.contenido?.length || 0), 0) / 1000)}K
           </Text>
           <Text style={styles.estadisticaTexto}>Caracteres</Text>
         </View>
@@ -309,7 +329,7 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
                 
                 <View style={styles.cuentoInfo}>
                   <MaterialCommunityIcons name="chart-bar" size={14} color="#757575" />
-                  <Text style={styles.cuentoInfoTexto}>{item.palabras} palabras</Text>
+                  <Text style={styles.cuentoInfoTexto}>{item.contenido?.split(/\s+/).length || 0} palabras</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -363,6 +383,13 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
                 {contenido.length} caracteres • {contenido.split(/\s+/).length} palabras
               </Text>
 
+              {cargando && (
+                <View style={styles.cargandoOverlay}>
+                  <ActivityIndicator size="large" color="#4A90D9" />
+                  <Text style={styles.cargandoTexto}>Guardando...</Text>
+                </View>
+              )}
+
               {/* Autor */}
               <Text style={styles.etiqueta}>Autor (opcional)</Text>
               <TextInput
@@ -378,7 +405,7 @@ const BibliotecaOfflineScreen = ({ navigation }) => {
                 <View style={styles.selector}>
                   <Text style={styles.etiqueta}>Grado</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {['1ro', '2do', '3ro', '4to', '5to', '6to', 'General'].map((g) => (
+                    {['1ro', '2do', '3ro', 'General'].map((g) => (
                       <TouchableOpacity
                         key={g}
                         style={[
@@ -764,6 +791,28 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     fontWeight: '600', 
     marginLeft: 8 
+  },
+
+  cargandoContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  cargandoTexto: { 
+    marginTop: 12, 
+    color: '#757575', 
+    fontSize: 14 
+  },
+  cargandoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
   },
 });
 

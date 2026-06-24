@@ -78,7 +78,7 @@ const LoginScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="book-education" size={60} color="#4A90D9" />
           </View>
           <Text style={styles.titulo}>LectoEscritura</Text>
-          <Text style={styles.subtitulo}>Escuela Nacional Jose Gabriel Alviares</Text>
+          <Text style={styles.subtitulo}>Escuela Nacional Jose Alvares de lugo</Text>
         </View>
 
         {/* Formulario */}

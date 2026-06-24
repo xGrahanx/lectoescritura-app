@@ -300,6 +300,25 @@ AFTER DELETE ON textos
 FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
 
 -- ══════════════════════════════════════════════════════════════════════════════
+-- TRIGGERS PARA: codigos_recuperacion
+-- ══════════════════════════════════════════════════════════════════════════════
+DROP TRIGGER IF EXISTS trigger_auditoria_codigos_recuperacion_insert ON codigos_recuperacion;
+DROP TRIGGER IF EXISTS trigger_auditoria_codigos_recuperacion_update ON codigos_recuperacion;
+DROP TRIGGER IF EXISTS trigger_auditoria_codigos_recuperacion_delete ON codigos_recuperacion;
+
+CREATE TRIGGER trigger_auditoria_codigos_recuperacion_insert
+AFTER INSERT ON codigos_recuperacion
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+CREATE TRIGGER trigger_auditoria_codigos_recuperacion_update
+AFTER UPDATE ON codigos_recuperacion
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+CREATE TRIGGER trigger_auditoria_codigos_recuperacion_delete
+AFTER DELETE ON codigos_recuperacion
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+-- ══════════════════════════════════════════════════════════════════════════════
 -- VERIFICACIÓN
 -- ══════════════════════════════════════════════════════════════════════════════
 

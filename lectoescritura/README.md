@@ -1,6 +1,6 @@
 # LectoEscritura App
 
-Aplicacion movil para el aprendizaje de lectoescritura en la **Escuela Nacional Jose Gabriel Alviares**, desarrollada con **React Native + Expo**.
+Aplicacion movil para el aprendizaje de lectoescritura en la **Escuela Nacional Jose Alvares de lugo**, desarrollada con **React Native + Expo**.
 
 ## Caracteristicas
 

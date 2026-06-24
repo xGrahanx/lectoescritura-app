@@ -1,6 +1,6 @@
 /**
  * App.jsx - Punto de entrada principal de la aplicación
- * LectoEscritura App - Escuela Nacional José Gabriel Alviares
+ * LectoEscritura App - Escuela Nacional Jose Alvares de lugo
  *
  * Inicializa la navegación principal y los proveedores de contexto globales.
  * Usa Expo como plataforma base para mayor compatibilidad y facilidad de despliegue.

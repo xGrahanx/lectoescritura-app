@@ -12,9 +12,7 @@ import {
   Modal, ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BIBLIOTECA_KEY = '@lectoescritura:biblioteca_offline';
+import { obtenerBiblioteca, obtenerCuentoPorId } from '../../services/bibliotecaService';
 
 const CuentosOfflineScreen = ({ navigation }) => {
   const [cuentos, setCuentos] = useState([]);
@@ -31,8 +29,7 @@ const CuentosOfflineScreen = ({ navigation }) => {
   const cargarCuentos = async () => {
     try {
       setCargando(true);
-      const cuentosJson = await AsyncStorage.getItem(BIBLIOTECA_KEY);
-      const cuentosCargados = cuentosJson ? JSON.parse(cuentosJson) : [];
+      const cuentosCargados = await obtenerBiblioteca();
       setCuentos(cuentosCargados);
     } catch (error) {
       console.error('Error cargando cuentos offline:', error);
@@ -52,7 +49,7 @@ const CuentosOfflineScreen = ({ navigation }) => {
     : cuentos.filter(cuento => cuento.grado === filtroGrado);
 
   // Grados disponibles
-  const grados = ['Todos', '1ro', '2do', '3ro', '4to', '5to', '6to', 'General'];
+  const grados = ['Todos', '1ro', '2do', '3ro', 'General'];
 
   if (cargando) {
     return (

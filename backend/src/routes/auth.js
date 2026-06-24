@@ -22,6 +22,7 @@ const bcrypt  = require('bcryptjs');
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { enviarCorreoRecuperacion, enviarCorreoBienvenida } = require('../utils/emailService');
+const { loginRateLimit, checkFailedAttempts, recordFailedAttempt, clearFailedAttempts } = require('../middleware/security');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -30,7 +31,7 @@ const REGEX_CORREO   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimit, checkFailedAttempts, async (req, res) => {
   const { correo, password } = req.body;
 
   if (!correo || !password) {
@@ -43,13 +44,18 @@ router.post('/login', async (req, res) => {
     });
 
     if (!usuario) {
+      recordFailedAttempt(req);
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' });
     }
 
     const passwordValida = await bcrypt.compare(password, usuario.password);
     if (!passwordValida) {
+      recordFailedAttempt(req);
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' });
     }
+
+    // Login exitoso - limpiar intentos fallidos
+    clearFailedAttempts(req);
 
     res.json({
       usuario: {
@@ -124,6 +130,24 @@ router.post('/registro', async (req, res) => {
       select: {
         id: true, nombre: true, apellido: true,
         correo: true, rol: true, grado: true,
+      },
+    });
+
+    // Registrar auditoría de registro (usuario_id será NULL porque es registro público)
+    await prisma.auditoria.create({
+      data: {
+        tabla: 'usuarios',
+        operacion: 'INSERT',
+        registro_id: nuevoUsuario.id,
+        datos_nuevos: {
+          id: nuevoUsuario.id,
+          nombre: nuevoUsuario.nombre,
+          apellido: nuevoUsuario.apellido,
+          correo: nuevoUsuario.correo,
+          rol: nuevoUsuario.rol,
+          grado: nuevoUsuario.grado,
+          tipo_registro: 'publico',
+        },
       },
     });
 

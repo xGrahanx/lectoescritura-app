@@ -18,9 +18,9 @@ import { API_CONFIG } from '../../utils/constantes';
 import { useAuth } from '../../context/AuthContext';
 
 const PREGUNTAS_EJEMPLO = [
-  { id: 1, tipo: 'opcion_multiple', pregunta: '¿Cuál es el tema principal del texto?', opciones: ['La amistad', 'La imaginación infantil', 'Los viajes espaciales', 'Los animales'], respuestaCorrecta: 1 },
-  { id: 2, tipo: 'verdadero_falso', pregunta: 'El narrador dibujó una boa que se comió un elefante.', respuestaCorrecta: true },
-  { id: 3, tipo: 'respuesta_abierta', pregunta: '¿Qué crees que quiso decir el autor con "Lo esencial es invisible a los ojos"? Explica con tus propias palabras.' },
+  { id: 1, tipo: 'opcion_multiple', pregunta: '¿Cuál es el tema principal del texto?', opciones: ['La naturaleza', 'La aventura', 'La amistad', 'El aprendizaje'], respuestaCorrecta: 3 },
+  { id: 2, tipo: 'verdadero_falso', pregunta: 'El texto presenta una situación problemática que debe resolverse.', respuestaCorrecta: true },
+  { id: 3, tipo: 'respuesta_abierta', pregunta: '¿Cuál es la enseñanza o mensaje principal que transmite el texto? Explica con tus propias palabras.' },
 ];
 
 const EjercicioLecturaScreen = ({ route, navigation }) => {

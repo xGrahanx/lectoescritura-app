@@ -173,6 +173,8 @@ model textos {
   titulo             String               @db.VarChar(100)
   autor              String               @db.VarChar(100)
   contenido          String
+  grado              String?              @db.VarChar(50)
+  categoria          String?              @db.VarChar(50)
   nivel              tipo_nivel
   activo             Boolean?             @default(true)
   creado_en          DateTime?            @default(now()) @db.Timestamp(6)

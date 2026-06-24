@@ -19,7 +19,9 @@ const alertasRouter   = require('./routes/alertas');
 const auditoriaRouter = require('./routes/auditoria');
 const reportesRouter  = require('./routes/reportes');
 const performanceRouter = require('./routes/performance');
+const bibliotecaRouter = require('./routes/biblioteca');
 const { performanceMiddleware, instrumentPrisma } = require('./middleware/performanceLogger');
+const { generalRateLimit, securityHeaders, sanitizeInput } = require('./middleware/security');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,6 +35,11 @@ global.prisma = prisma;
 
 app.use(cors());
 app.use(express.json());
+
+// ─── Middleware de Seguridad ───────────────────────────────────────────────────
+app.use(securityHeaders);
+app.use(sanitizeInput);
+app.use(generalRateLimit);
 
 // ─── Middleware de Performance y Auditoria de Tiempos ──────────────────────────
 app.use(performanceMiddleware);
@@ -52,6 +59,7 @@ app.use('/api/alertas',    alertasRouter);
 app.use('/api/auditoria',  auditoriaRouter);
 app.use('/api/reportes',   reportesRouter);
 app.use('/api/performance', performanceRouter);
+app.use('/api/biblioteca', bibliotecaRouter);
 
 // Ruta de salud para verificar que el servidor esta corriendo
 app.get('/api/health', (req, res) => {

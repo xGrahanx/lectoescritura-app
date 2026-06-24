@@ -394,7 +394,7 @@ router.get('/pdf', async (req, res) => {
     doc.fontSize(11)
        .fillColor('#B3E5FC')
        .font('Helvetica')
-       .text('Escuela Nacional José Gabriel Alviares', 50, 55, { align: 'center' });
+       .text('Escuela Nacional Jose Alvares de lugo', 50, 55, { align: 'center' });
 
     // Fecha de generación
     doc.fontSize(10)

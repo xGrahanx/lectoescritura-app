@@ -23,7 +23,6 @@ const ACCESO_RAPIDO = [
 
 const InicioEstudianteScreen = ({ navigation }) => {
   const { usuario, cerrarSesion } = useAuth();
-  const { estaConectado }         = useOffline();
   const [resumen, setResumen]     = useState(null);
   const [tareas, setTareas]       = useState([]);
   const [cargando, setCargando]   = useState(true);
@@ -68,13 +67,6 @@ const InicioEstudianteScreen = ({ navigation }) => {
       style={styles.contenedor}
       refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefrescar} />}
     >
-      {!estaConectado && (
-        <View style={styles.bannerOffline}>
-          <MaterialCommunityIcons name="wifi-off" size={16} color="#FFFFFF" />
-          <Text style={styles.textoOffline}>  Sin conexión - Los datos se sincronizarán al conectarte</Text>
-        </View>
-      )}
-
       {/* Encabezado */}
       <View style={styles.encabezado}>
         <View>
@@ -195,11 +187,6 @@ const InicioEstudianteScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: '#F5F9FF' },
-  bannerOffline: {
-    backgroundColor: '#FF9800', flexDirection: 'row',
-    alignItems: 'center', padding: 10, paddingHorizontal: 16,
-  },
-  textoOffline: { color: '#FFFFFF', fontSize: 12 },
   encabezado: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
     padding: 20, paddingTop: 50, backgroundColor: '#FFFFFF',
