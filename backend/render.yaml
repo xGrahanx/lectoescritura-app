@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: lectoescritura-backend
+    env: node
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: 3000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
