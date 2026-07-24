@@ -16,7 +16,7 @@ const failedAttempts = new Map();
 // Limita solicitudes generales por IP
 const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 solicitudes por ventana
+  max: 500, // máximo 500 solicitudes por ventana (suficiente para desarrollo)
   message: {
     error: 'Demasiadas solicitudes. Por favor espera un momento.',
     retryAfter: '15 minutos',
@@ -29,14 +29,14 @@ const generalRateLimit = rateLimit({
 // Limita intentos de login por IP
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 intentos de login por ventana
+  max: 20, // máximo 20 intentos de login por ventana
   message: {
     error: 'Demasiados intentos de login. Por favor espera 15 minutos.',
     retryAfter: '15 minutos',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // No cuenta intentos exitosos
+  skipSuccessfulRequests: true,
 });
 
 // ─── BLOQUEO TEMPORAL POR INTENTOS FALLIDOS ─────────────────────────────────────

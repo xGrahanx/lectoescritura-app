@@ -10,6 +10,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DashboardDocenteScreen from '../screens/teacher/DashboardDocenteScreen';
 import EstudiantesScreen from '../screens/teacher/EstudiantesScreen';
@@ -22,6 +23,8 @@ import EditarPerfilScreen from '../screens/teacher/EditarPerfilScreen';
 import CambiarPasswordScreen from '../screens/teacher/CambiarPasswordScreen';
 import AyudaScreen from '../screens/teacher/AyudaScreen';
 import BibliotecaOfflineScreen from '../screens/teacher/BibliotecaOfflineScreen';
+import ChatScreen from '../screens/teacher/ChatScreen';
+import ConversacionScreen from '../screens/teacher/ConversacionScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -46,19 +49,32 @@ const PerfilStack = () => (
   </Stack.Navigator>
 );
 
+// Stack para el chat
+const ChatStack = () => (
+  <Stack.Navigator screenOptions={{ headerTitleAlign: 'center', headerBackTitleVisible: false }}>
+    <Stack.Screen name="ChatLista" component={ChatScreen} options={{ title: 'Mensajes' }} />
+    <Stack.Screen name="Conversacion" component={ConversacionScreen} />
+  </Stack.Navigator>
+);
+
 const TeacherNavigator = () => {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#2E7D32',
         tabBarInactiveTintColor: '#9E9E9E',
-        tabBarStyle: { paddingBottom: 5, height: 60 },
+        tabBarStyle: { 
+          paddingBottom: Math.max(insets.bottom, 5),
+          height: 60 + Math.max(insets.bottom, 0),
+        },
         tabBarIcon: ({ color, size }) => {
           const iconos = {
             Dashboard: 'view-dashboard',
             Estudiantes: 'account-group',
             AsistenteIA: 'robot',
+            Chat: 'chat',
             Alertas: 'bell',
             Perfil: 'account-circle',
           };
@@ -75,6 +91,7 @@ const TeacherNavigator = () => {
       <Tab.Screen name="Dashboard" component={DashboardDocenteScreen} options={{ tabBarLabel: 'Dashboard' }} />
       <Tab.Screen name="Estudiantes" component={EstudiantesStack} options={{ tabBarLabel: 'Estudiantes' }} />
       <Tab.Screen name="AsistenteIA" component={AsistenteIAScreen} options={{ tabBarLabel: 'IA' }} />
+      <Tab.Screen name="Chat" component={ChatStack} options={{ tabBarLabel: 'Chat' }} />
       <Tab.Screen name="Alertas" component={AlertasScreen} options={{ tabBarLabel: 'Alertas' }} />
       <Tab.Screen name="Perfil" component={PerfilStack} options={{ tabBarLabel: 'Perfil' }} />
     </Tab.Navigator>

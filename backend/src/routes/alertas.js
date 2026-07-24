@@ -9,6 +9,7 @@
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -53,7 +54,9 @@ router.put('/:id/leer', async (req, res) => {
   if (isNaN(id)) return res.status(400).json({ mensaje: 'ID inválido' });
 
   try {
-    await prisma.alertas.update({ where: { id }, data: { leida: true } });
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.alertas.update({ where: { id }, data: { leida: true } });
+    });
     res.json({ mensaje: 'Alerta marcada como leída' });
   } catch (error) {
     console.error('Error al marcar alerta:', error);
@@ -67,9 +70,11 @@ router.put('/docente/:docenteId/leer-todas', async (req, res) => {
   if (isNaN(docenteId)) return res.status(400).json({ mensaje: 'ID inválido' });
 
   try {
-    await prisma.alertas.updateMany({
-      where: { docente_id: docenteId, leida: false },
-      data: { leida: true },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.alertas.updateMany({
+        where: { docente_id: docenteId, leida: false },
+        data: { leida: true },
+      });
     });
     res.json({ mensaje: 'Todas las alertas marcadas como leídas' });
   } catch (error) {
@@ -87,11 +92,15 @@ router.delete('/docente/:docenteId/limpiar', async (req, res) => {
 
   try {
     // Soft delete: desactivar todas las alertas del docente
-    const resultado = await prisma.alertas.updateMany({
-      where: { docente_id: docenteId, activo: true },
-      data: { activo: false },
+    let count = 0;
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      const resultado = await tx.alertas.updateMany({
+        where: { docente_id: docenteId, activo: true },
+        data: { activo: false },
+      });
+      count = resultado.count;
     });
-    res.json({ mensaje: `${resultado.count} alertas eliminadas correctamente` });
+    res.json({ mensaje: `${count} alertas eliminadas correctamente` });
   } catch (error) {
     console.error('Error al limpiar alertas:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor' });
@@ -109,14 +118,16 @@ router.post('/generar/:docenteId', async (req, res) => {
     const hace7DiasLimpieza = new Date();
     hace7DiasLimpieza.setDate(hace7DiasLimpieza.getDate() - 7);
     
-    await prisma.alertas.updateMany({
-      where: {
-        docente_id: docenteId,
-        tipo: 'inactividad',
-        creado_en: { lt: hace7DiasLimpieza },
-        activo: true,
-      },
-      data: { activo: false },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.alertas.updateMany({
+        where: {
+          docente_id: docenteId,
+          tipo: 'inactividad',
+          creado_en: { lt: hace7DiasLimpieza },
+          activo: true,
+        },
+        data: { activo: false },
+      });
     });
 
     // Obtener todos los estudiantes del docente
@@ -184,15 +195,17 @@ router.post('/generar/:docenteId', async (req, res) => {
         });
 
         if (!alertaExistente) {
-          await prisma.alertas.create({
-            data: {
-              docente_id: docenteId,
-              estudiante_id: estudiante.id,
-              tipo: 'inactividad',
-              titulo: 'Inactividad prolongada',
-              mensaje: `${estudiante.nombre} ${estudiante.apellido} lleva ${diasSinActividad} días sin completar ejercicios. Se recomienda hacer seguimiento.`,
-              leida: false,
-            },
+          await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+            await tx.alertas.create({
+              data: {
+                docente_id: docenteId,
+                estudiante_id: estudiante.id,
+                tipo: 'inactividad',
+                titulo: 'Inactividad prolongada',
+                mensaje: `${estudiante.nombre} ${estudiante.apellido} lleva ${diasSinActividad} días sin completar ejercicios. Se recomienda hacer seguimiento.`,
+                leida: false,
+              },
+            });
           });
           alertasGeneradas++;
         }
@@ -230,15 +243,17 @@ router.post('/generar/:docenteId', async (req, res) => {
           });
 
           if (!alertaExistente) {
-            await prisma.alertas.create({
-              data: {
-                docente_id: docenteId,
-                estudiante_id: estudiante.id,
-                tipo: 'error',
-                titulo: 'Bajo rendimiento general',
-                mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio general de ${promedio}% en los últimos ejercicios de lectura y escritura. Se recomienda reforzar con ejercicios básicos.`,
-                leida: false,
-              },
+            await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+              await tx.alertas.create({
+                data: {
+                  docente_id: docenteId,
+                  estudiante_id: estudiante.id,
+                  tipo: 'error',
+                  titulo: 'Bajo rendimiento general',
+                  mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio general de ${promedio}% en los últimos ejercicios de lectura y escritura. Se recomienda reforzar con ejercicios básicos.`,
+                  leida: false,
+                },
+              });
             });
             alertasGeneradas++;
           }
@@ -256,15 +271,17 @@ router.post('/generar/:docenteId', async (req, res) => {
           });
 
           if (!alertaExistente) {
-            await prisma.alertas.create({
-              data: {
-                docente_id: docenteId,
-                estudiante_id: estudiante.id,
-                tipo: 'mejora',
-                titulo: 'Progreso en buen camino',
-                mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio general de ${promedio}% esta semana. Sigue avanzando bien.`,
-                leida: false,
-              },
+            await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+              await tx.alertas.create({
+                data: {
+                  docente_id: docenteId,
+                  estudiante_id: estudiante.id,
+                  tipo: 'mejora',
+                  titulo: 'Progreso en buen camino',
+                  mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio general de ${promedio}% esta semana. Sigue avanzando bien.`,
+                  leida: false,
+                },
+              });
             });
             alertasGeneradas++;
           }
@@ -297,15 +314,17 @@ router.post('/generar/:docenteId', async (req, res) => {
           });
 
           if (!alertaExistente) {
-            await prisma.alertas.create({
-              data: {
-                docente_id: docenteId,
-                estudiante_id: estudiante.id,
-                tipo: 'alto_rendimiento',
-                titulo: 'Alto rendimiento destacado',
-                mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio de ${promedioSemana}% esta semana${racha >= 5 ? ` y una racha de ${racha} días consecutivos` : ''}. Considera asignarle tareas adicionales.`,
-                leida: false,
-              },
+            await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+              await tx.alertas.create({
+                data: {
+                  docente_id: docenteId,
+                  estudiante_id: estudiante.id,
+                  tipo: 'alto_rendimiento',
+                  titulo: 'Alto rendimiento destacado',
+                  mensaje: `${estudiante.nombre} ${estudiante.apellido} tiene un promedio de ${promedioSemana}% esta semana${racha >= 5 ? ` y una racha de ${racha} días consecutivos` : ''}. Considera asignarle tareas adicionales.`,
+                  leida: false,
+                },
+              });
             });
             alertasGeneradas++;
           }

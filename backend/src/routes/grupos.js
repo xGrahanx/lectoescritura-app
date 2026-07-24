@@ -13,6 +13,7 @@
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -152,12 +153,14 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ mensaje: 'Ya existe un grupo con ese nombre' });
     }
 
-    const nuevoGrupo = await prisma.Grupo.create({
-      data: { nombre, docente_id: parseInt(docenteId) },
-      include: {
-        usuarios: { select: { id: true, nombre: true, apellido: true } },
-        _count: { select: { grupos_estudiantes: true } },
-      },
+    const nuevoGrupo = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.Grupo.create({
+        data: { nombre, docente_id: parseInt(docenteId) },
+        include: {
+          usuarios: { select: { id: true, nombre: true, apellido: true } },
+          _count: { select: { grupos_estudiantes: true } },
+        },
+      });
     });
 
     res.status(201).json({
@@ -193,16 +196,18 @@ router.put('/:id', async (req, res) => {
       if (!docente) return res.status(404).json({ mensaje: 'Docente no encontrado' });
     }
 
-    const grupoActualizado = await prisma.Grupo.update({
-      where: { id },
-      data: {
-        ...(nombre    && { nombre }),
-        ...(docenteId && { docente_id: parseInt(docenteId) }),
-      },
-      include: {
-        usuarios: { select: { id: true, nombre: true, apellido: true } },
-        _count: { select: { grupos_estudiantes: true } },
-      },
+    const grupoActualizado = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.Grupo.update({
+        where: { id },
+        data: {
+          ...(nombre    && { nombre }),
+          ...(docenteId && { docente_id: parseInt(docenteId) }),
+        },
+        include: {
+          usuarios: { select: { id: true, nombre: true, apellido: true } },
+          _count: { select: { grupos_estudiantes: true } },
+        },
+      });
     });
 
     res.json({
@@ -247,8 +252,10 @@ router.post('/:id/estudiantes', async (req, res) => {
       return res.status(409).json({ mensaje: 'El estudiante ya pertenece a este grupo' });
     }
 
-    await prisma.GrupoEstudiante.create({
-      data: { grupo_id: grupoId, estudiante_id: estudianteId },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.GrupoEstudiante.create({
+        data: { grupo_id: grupoId, estudiante_id: estudianteId },
+      });
     });
 
     res.status(201).json({
@@ -279,9 +286,11 @@ router.delete('/:id/estudiantes/:estudianteId', async (req, res) => {
     }
 
     // Soft delete: desactivar en vez de eliminar físicamente
-    await prisma.GrupoEstudiante.update({
-      where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
-      data: { activo: false },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.GrupoEstudiante.update({
+        where: { grupo_id_estudiante_id: { grupo_id: grupoId, estudiante_id: estudianteId } },
+        data: { activo: false },
+      });
     });
 
     res.json({ mensaje: 'Estudiante removido del grupo correctamente' });
@@ -300,7 +309,9 @@ router.delete('/:id', async (req, res) => {
     const grupo = await prisma.Grupo.findUnique({ where: { id } });
     if (!grupo) return res.status(404).json({ mensaje: 'Grupo no encontrado' });
 
-    await prisma.Grupo.update({ where: { id }, data: { activo: false } });
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.Grupo.update({ where: { id }, data: { activo: false } });
+    });
 
     res.json({ mensaje: `Grupo "${grupo.nombre}" eliminado correctamente` });
   } catch (error) {

@@ -12,6 +12,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Pantallas del estudiante
 import InicioEstudianteScreen from '../screens/student/InicioEstudianteScreen';
@@ -23,6 +24,9 @@ import EjerciciosIAScreen from '../screens/student/EjerciciosIAScreen';
 import ProgresoScreen from '../screens/student/ProgresoScreen';
 import TareasScreen from '../screens/student/TareasScreen';
 import CuentosOfflineScreen from '../screens/student/CuentosOfflineScreen';
+import JuegoMemoriaScreen from '../screens/student/JuegoMemoriaScreen';
+import ChatScreen from '../screens/teacher/ChatScreen';
+import ConversacionScreen from '../screens/teacher/ConversacionScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -61,22 +65,43 @@ const EjerciciosIAStack = () => (
   </Stack.Navigator>
 );
 
+// Stack para juegos
+const JuegosStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="JuegoMemoria" component={JuegoMemoriaScreen} />
+  </Stack.Navigator>
+);
+
+// Stack para chat
+const ChatStack = () => (
+  <Stack.Navigator screenOptions={{ headerTitleAlign: 'center', headerBackTitleVisible: false }}>
+    <Stack.Screen name="ChatLista" component={ChatScreen} options={{ title: 'Mensajes' }} />
+    <Stack.Screen name="Conversacion" component={ConversacionScreen} />
+  </Stack.Navigator>
+);
+
 const StudentNavigator = () => {
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#4A90D9',
         tabBarInactiveTintColor: '#9E9E9E',
-        tabBarStyle: { paddingBottom: 5, height: 60 },
+        tabBarStyle: { 
+          paddingBottom: Math.max(insets.bottom, 5),
+          height: 60 + Math.max(insets.bottom, 0),
+        },
         tabBarIcon: ({ color, size }) => {
           const iconos = {
             Inicio: 'home',
             Lectura: 'book-open-variant',
             Escritura: 'pencil',
-            EjerciciosIA: 'robot',
-            Progreso: 'chart-line',
+            Juegos: 'gamepad-variant',
             Tareas: 'clipboard-list',
+            EjerciciosIA: 'robot',
+            Chat: 'chat',
+            Progreso: 'chart-line',
           };
           return (
             <MaterialCommunityIcons
@@ -91,8 +116,10 @@ const StudentNavigator = () => {
       <Tab.Screen name="Inicio" component={InicioEstudianteScreen} options={{ tabBarLabel: 'Inicio' }} />
       <Tab.Screen name="Lectura" component={LecturaStack} options={{ tabBarLabel: 'Lectura' }} />
       <Tab.Screen name="Escritura" component={EscrituraStack} options={{ tabBarLabel: 'Escritura' }} />
+      <Tab.Screen name="Juegos" component={JuegosStack} options={{ tabBarLabel: 'Juegos' }} />
       <Tab.Screen name="Tareas" component={TareasStack} options={{ tabBarLabel: 'Tareas' }} />
       <Tab.Screen name="EjerciciosIA" component={EjerciciosIAStack} options={{ tabBarLabel: 'IA' }} />
+      <Tab.Screen name="Chat" component={ChatStack} options={{ tabBarLabel: 'Chat' }} />
       <Tab.Screen name="Progreso" component={ProgresoScreen} options={{ tabBarLabel: 'Progreso' }} />
     </Tab.Navigator>
   );

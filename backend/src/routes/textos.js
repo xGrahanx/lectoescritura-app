@@ -10,6 +10,7 @@
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -75,13 +76,15 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const nuevoTexto = await prisma.textos.create({
-      data: {
-        titulo: titulo.trim(),
-        autor: autor.trim(),
-        contenido: contenido.trim(),
-        nivel,
-      },
+    const nuevoTexto = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.textos.create({
+        data: {
+          titulo: titulo.trim(),
+          autor: autor.trim(),
+          contenido: contenido.trim(),
+          nivel,
+        },
+      });
     });
 
     res.status(201).json({ mensaje: 'Texto creado exitosamente', texto: nuevoTexto });
@@ -109,15 +112,17 @@ router.put('/:id', async (req, res) => {
     const texto = await prisma.textos.findUnique({ where: { id } });
     if (!texto) return res.status(404).json({ mensaje: 'Texto no encontrado' });
 
-    const textoActualizado = await prisma.textos.update({
-      where: { id },
-      data: {
-        ...(titulo    && { titulo: titulo.trim() }),
-        ...(autor     && { autor: autor.trim() }),
-        ...(contenido && { contenido: contenido.trim() }),
-        ...(nivel     && { nivel }),
-        ...(activo !== undefined && { activo }),
-      },
+    const textoActualizado = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.textos.update({
+        where: { id },
+        data: {
+          ...(titulo    && { titulo: titulo.trim() }),
+          ...(autor     && { autor: autor.trim() }),
+          ...(contenido && { contenido: contenido.trim() }),
+          ...(nivel     && { nivel }),
+          ...(activo !== undefined && { activo }),
+        },
+      });
     });
 
     res.json({ mensaje: 'Texto actualizado correctamente', texto: textoActualizado });
@@ -136,7 +141,9 @@ router.delete('/:id', async (req, res) => {
     const texto = await prisma.textos.findUnique({ where: { id } });
     if (!texto) return res.status(404).json({ mensaje: 'Texto no encontrado' });
 
-    await prisma.textos.update({ where: { id }, data: { activo: false } });
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.textos.update({ where: { id }, data: { activo: false } });
+    });
 
     res.json({ mensaje: `Texto "${texto.titulo}" eliminado correctamente` });
   } catch (error) {

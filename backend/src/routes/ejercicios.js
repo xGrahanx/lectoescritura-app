@@ -10,6 +10,7 @@
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const conAuditoria = require('../utils/registrarAuditoria');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -90,14 +91,16 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const nuevoEjercicio = await prisma.ejercicios_escritura.create({
-      data: {
-        titulo: titulo.trim(),
-        tipo,
-        descripcion: descripcion ? descripcion.trim() : null,
-        contenido: contenido ? contenido.trim() : null,
-        nivel,
-      },
+    const nuevoEjercicio = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.ejercicios_escritura.create({
+        data: {
+          titulo: titulo.trim(),
+          tipo,
+          descripcion: descripcion ? descripcion.trim() : null,
+          contenido: contenido ? contenido.trim() : null,
+          nivel,
+        },
+      });
     });
 
     res.status(201).json({ mensaje: 'Ejercicio creado exitosamente', ejercicio: nuevoEjercicio });
@@ -132,15 +135,17 @@ router.put('/:id', async (req, res) => {
     const ejercicio = await prisma.ejercicios_escritura.findUnique({ where: { id } });
     if (!ejercicio) return res.status(404).json({ mensaje: 'Ejercicio no encontrado' });
 
-    const ejercicioActualizado = await prisma.ejercicios_escritura.update({
-      where: { id },
-      data: {
-        ...(titulo      && { titulo: titulo.trim() }),
-        ...(tipo        && { tipo }),
-        ...(descripcion !== undefined && { descripcion: descripcion ? descripcion.trim() : null }),
-        ...(contenido   !== undefined && { contenido: contenido ? contenido.trim() : null }),
-        ...(nivel       && { nivel }),
-      },
+    const ejercicioActualizado = await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      return await tx.ejercicios_escritura.update({
+        where: { id },
+        data: {
+          ...(titulo      && { titulo: titulo.trim() }),
+          ...(tipo        && { tipo }),
+          ...(descripcion !== undefined && { descripcion: descripcion ? descripcion.trim() : null }),
+          ...(contenido   !== undefined && { contenido: contenido ? contenido.trim() : null }),
+          ...(nivel       && { nivel }),
+        },
+      });
     });
 
     res.json({ mensaje: 'Ejercicio actualizado correctamente', ejercicio: ejercicioActualizado });
@@ -161,9 +166,11 @@ router.delete('/:id', async (req, res) => {
     if (!ejercicio) return res.status(404).json({ mensaje: 'Ejercicio no encontrado' });
 
     // Soft delete: desactivar en vez de eliminar físicamente
-    await prisma.ejercicios_escritura.update({
-      where: { id },
-      data: { activo: false },
+    await conAuditoria(prisma, req.headers['x-usuario-id'], async (tx) => {
+      await tx.ejercicios_escritura.update({
+        where: { id },
+        data: { activo: false },
+      });
     });
 
     res.json({ mensaje: `Ejercicio "${ejercicio.titulo}" eliminado correctamente` });

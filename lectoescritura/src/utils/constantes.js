@@ -49,6 +49,6 @@ export const COLORES = {
 // Cambia EXPO_PUBLIC_API_URL en el archivo .env con la IP de tu maquina
 // Ejemplo: EXPO_PUBLIC_API_URL=http://192.168.1.X:3000/api
 export const API_CONFIG = {
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.21:3000/api',
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.27:3000/api',
   TIMEOUT: 10000,
 };
