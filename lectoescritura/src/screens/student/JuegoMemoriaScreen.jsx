@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, useWindowD
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import JuegoMemoria from '../../components/JuegoMemoria';
 import { useAuth } from '../../context/AuthContext';
 import { API_CONFIG } from '../../utils/constantes';
@@ -98,11 +99,36 @@ const JuegoMemoriaScreen = ({ navigation }) => {
   const [resultado, setResultado] = useState(null);
   const [juegoKey, setJuegoKey] = useState(0);
 
+  // Estado de Récords
+  const [records, setRecords] = useState({
+    basico: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+    intermedio: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+    avanzado: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+  });
+  const [esNuevoRecord, setEsNuevoRecord] = useState(false);
+  const [mostrarModalRecords, setMostrarModalRecords] = useState(false);
+
   const niveles = [
     { id: 'basico', nombre: 'Básico', descripcion: 'Imagen ↔ Palabra', icon: 'star-outline', color: '#4CAF50', bgColor: '#E8F5E9' },
     { id: 'intermedio', nombre: 'Intermedio', descripcion: 'Sinónimos', icon: 'star-half-full', color: '#FF9800', bgColor: '#FFF3E0' },
     { id: 'avanzado', nombre: 'Avanzado', descripcion: 'Definiciones', icon: 'star', color: '#F44336', bgColor: '#FFEBEE' },
   ];
+
+  const cargarRecords = useCallback(async () => {
+    try {
+      const key = `@records_memoria_${usuario?.id || 'invitado'}`;
+      const data = await AsyncStorage.getItem(key);
+      if (data) {
+        setRecords(JSON.parse(data));
+      }
+    } catch (error) {
+      console.error('Error al cargar récords:', error);
+    }
+  }, [usuario]);
+
+  useEffect(() => {
+    cargarRecords();
+  }, [cargarRecords]);
 
   const seleccionarNivel = (nivel) => {
     setNivelSeleccionado(nivel);
@@ -111,6 +137,44 @@ const JuegoMemoriaScreen = ({ navigation }) => {
 
   const handleCompletado = useCallback(async (data) => {
     setResultado(data);
+
+    // Calcular si es un nuevo récord
+    if (nivelSeleccionado) {
+      try {
+        const key = `@records_memoria_${usuario?.id || 'invitado'}`;
+        const prevData = await AsyncStorage.getItem(key);
+        const actualRecords = prevData ? JSON.parse(prevData) : {
+          basico: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+          intermedio: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+          avanzado: { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 },
+        };
+
+        const recActual = actualRecords[nivelSeleccionado] || { mejorTiempo: null, menosMovimientos: null, maxEstrellas: 0, jugadas: 0 };
+        
+        const esMejorTiempo = recActual.mejorTiempo === null || data.tiempo < recActual.mejorTiempo;
+        const esMenosMovimientos = recActual.menosMovimientos === null || data.movimientos < recActual.menosMovimientos;
+        const esNuevo = esMejorTiempo || esMenosMovimientos;
+        setEsNuevoRecord(esNuevo);
+
+        const nuevoRegistroNivel = {
+          mejorTiempo: esMejorTiempo ? data.tiempo : recActual.mejorTiempo,
+          menosMovimientos: esMenosMovimientos ? data.movimientos : recActual.menosMovimientos,
+          maxEstrellas: Math.max(recActual.maxEstrellas || 0, data.estrellas || 0),
+          jugadas: (recActual.jugadas || 0) + 1,
+        };
+
+        const nuevosRecords = {
+          ...actualRecords,
+          [nivelSeleccionado]: nuevoRegistroNivel
+        };
+
+        setRecords(nuevosRecords);
+        await AsyncStorage.setItem(key, JSON.stringify(nuevosRecords));
+      } catch (error) {
+        console.error('Error actualizando récords:', error);
+      }
+    }
+
     setMostrarModal(true);
 
     // Guardar progreso en el backend
@@ -125,7 +189,7 @@ const JuegoMemoriaScreen = ({ navigation }) => {
         console.error('Error al registrar progreso en la DB:', error);
       }
     }
-  }, [usuario]);
+  }, [usuario, nivelSeleccionado]);
 
   const reiniciar = () => {
     setMostrarModal(false);
@@ -140,6 +204,7 @@ const JuegoMemoriaScreen = ({ navigation }) => {
   };
 
   const formatearTiempo = (segundos) => {
+    if (segundos == null) return '--:--';
     const minutos = Math.floor(segundos / 60);
     const segs = segundos % 60;
     return `${minutos}:${segs.toString().padStart(2, '0')}`;
@@ -175,6 +240,14 @@ const JuegoMemoriaScreen = ({ navigation }) => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContenido}>
+              {/* Insignia si rompió un récord */}
+              {esNuevoRecord && (
+                <View style={styles.badgeNuevoRecord}>
+                  <MaterialCommunityIcons name="trophy" size={20} color="#FFD700" />
+                  <Text style={styles.badgeTexto}>¡NUEVO RÉCORD PERSONAL!</Text>
+                </View>
+              )}
+
               {/* Estrellas animadas en base a puntuación */}
               <View style={styles.estrellasContainer}>
                 <MaterialCommunityIcons 
@@ -249,6 +322,26 @@ const JuegoMemoriaScreen = ({ navigation }) => {
           </Text>
         </View>
 
+        {/* Tarjeta / Banner de Récords Personales */}
+        <TouchableOpacity 
+          style={styles.recordsBanner}
+          onPress={() => setMostrarModalRecords(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.recordsBannerIcono}>
+            <MaterialCommunityIcons name="trophy" size={32} color="#FFD700" />
+          </View>
+          <View style={styles.recordsBannerInfo}>
+            <Text style={styles.recordsBannerTitulo}>Tabla de Récords</Text>
+            <Text style={styles.recordsBannerSub}>
+              {(records.basico?.jugadas || 0) + (records.intermedio?.jugadas || 0) + (records.avanzado?.jugadas || 0) > 0
+                ? `${(records.basico?.jugadas || 0) + (records.intermedio?.jugadas || 0) + (records.avanzado?.jugadas || 0)} partidas completadas • Toca para ver`
+                : '¡Toca aquí para ver tus mejores marcas!'}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#FFF" />
+        </TouchableOpacity>
+
         <Text style={styles.seccionTitulo}>Selecciona un nivel</Text>
 
         <View style={styles.nivelesContainer}>
@@ -292,7 +385,91 @@ const JuegoMemoriaScreen = ({ navigation }) => {
             <Text style={styles.instruccionTexto}>Encuentra todas las parejas para ganar</Text>
           </View>
         </View>
+        <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* Modal de Tabla de Récords */}
+      <Modal
+        visible={mostrarModalRecords}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setMostrarModalRecords(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalRecordsContenido}>
+            <View style={styles.modalRecordsHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <MaterialCommunityIcons name="trophy-award" size={32} color="#FFD700" />
+                <Text style={styles.modalRecordsTitulo}>Mis Récords</Text>
+              </View>
+              <TouchableOpacity onPress={() => setMostrarModalRecords(false)} style={styles.botonCerrarModal}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ width: '100%', maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {niveles.map((n) => {
+                const rec = records[n.id] || {};
+                return (
+                  <View key={n.id} style={[styles.recordCardNivel, { borderColor: n.color }]}>
+                    <View style={styles.recordCardHeader}>
+                      <View style={[styles.badgeNivel, { backgroundColor: n.color }]}>
+                        <MaterialCommunityIcons name={n.icon} size={16} color="#FFF" />
+                        <Text style={styles.badgeNivelTexto}>{n.nombre}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {[1, 2, 3].map((star) => (
+                          <MaterialCommunityIcons 
+                            key={star}
+                            name={star <= (rec.maxEstrellas || 0) ? 'star' : 'star-outline'} 
+                            size={20} 
+                            color={star <= (rec.maxEstrellas || 0) ? '#FFD700' : '#DDD'} 
+                          />
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.recordRowGrid}>
+                      <View style={styles.recordCol}>
+                        <MaterialCommunityIcons name="clock-fast" size={22} color="#4A90D9" />
+                        <Text style={styles.recordColValor}>
+                          {formatearTiempo(rec.mejorTiempo)}
+                        </Text>
+                        <Text style={styles.recordColLabel}>Mejor Tiempo</Text>
+                      </View>
+
+                      <View style={styles.recordColDivider} />
+
+                      <View style={styles.recordCol}>
+                        <MaterialCommunityIcons name="gesture-tap" size={22} color="#FF9800" />
+                        <Text style={styles.recordColValor}>
+                          {rec.menosMovimientos != null ? `${rec.menosMovimientos}` : '--'}
+                        </Text>
+                        <Text style={styles.recordColLabel}>Menos Movs</Text>
+                      </View>
+
+                      <View style={styles.recordColDivider} />
+
+                      <View style={styles.recordCol}>
+                        <MaterialCommunityIcons name="controller-classic" size={22} color="#4CAF50" />
+                        <Text style={styles.recordColValor}>{rec.jugadas || 0}</Text>
+                        <Text style={styles.recordColLabel}>Partidas</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={[styles.botonPrimario, { marginTop: 15 }]} 
+              onPress={() => setMostrarModalRecords(false)}
+            >
+              <Text style={styles.botonTexto}>¡Entendido!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -340,9 +517,9 @@ const styles = StyleSheet.create({
   bienvenida: {
     backgroundColor: '#FFF',
     borderRadius: 20,
-    padding: 30,
+    padding: 25,
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -353,14 +530,49 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: 10,
+    marginBottom: 8,
   },
   descripcion: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+  },
+  recordsBanner: {
+    backgroundColor: '#1A237E',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  recordsBannerIcono: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  recordsBannerInfo: {
+    flex: 1,
+  },
+  recordsBannerTitulo: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 3,
+  },
+  recordsBannerSub: {
+    fontSize: 12,
+    color: '#E0E0E0',
   },
   seccionTitulo: {
     fontSize: 18,
@@ -448,16 +660,32 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContenido: {
     backgroundColor: '#FFF',
     borderRadius: 24,
-    padding: 35,
+    padding: 30,
     width: '90%',
     alignItems: 'center',
+  },
+  badgeNuevoRecord: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A237E',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 15,
+    gap: 8,
+  },
+  badgeTexto: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   estrellasContainer: {
     flexDirection: 'row',
@@ -537,6 +765,89 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Modal de Récords Styles
+  modalRecordsContenido: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '92%',
+    alignItems: 'center',
+  },
+  modalRecordsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
+  modalRecordsTitulo: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1A237E',
+  },
+  botonCerrarModal: {
+    padding: 6,
+  },
+  recordCardNivel: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  recordCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  badgeNivel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 6,
+  },
+  badgeNivelTexto: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  recordRowGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+  },
+  recordCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  recordColValor: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 4,
+  },
+  recordColLabel: {
+    fontSize: 11,
+    color: '#757575',
+    marginTop: 2,
+  },
+  recordColDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#EEEEEE',
+  },
 });
 
 export default JuegoMemoriaScreen;
+
